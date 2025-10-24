@@ -1,0 +1,2797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1200, initial-scale=1.0">
+    <title>GkE Study Tracker (v11.4)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase compat versions for better stability -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-primary: #F8F8F8;
+            --bg-card: #FFFFFF;
+            --text-primary: #1A1A1A;
+            --text-secondary: #6B6B6B;
+            --border-color: #EAEAEA;
+            --accent-color: #007AFF;
+            --accent-color-light: #e0ecff;
+            --dot-color-1: #34C759; /* Lec */
+            --dot-color-2: #007AFF; /* 1st */
+            --dot-color-3: #FF9500; /* 2nd */
+            --dot-color-4: #AF52DE; /* 3rd */
+            --dot-color-5: #FF3B30; /* R1 */
+            --dot-color-6: #5856D6; /* R2 */
+            --archive-color: #9A9A9A;
+            --priority-high: #FF3B30;
+            --priority-medium: #FF9500;
+            --priority-low: #34C759;
+        }
+        
+        .dark {
+            --bg-primary: #1C1C1E;
+            --bg-card: #2C2C2E;
+            --text-primary: #E5E5E7;
+            --text-secondary: #9A9A9A;
+            --border-color: #3A3A3C;
+            --accent-color: #0A84FF;
+            --accent-color-light: #3a3a3c;
+            --dot-color-1: #30D158;
+            --dot-color-2: #0A84FF;
+            --dot-color-3: #FF9F0A;
+            --dot-color-4: #BF5AF2;
+            --dot-color-5: #FF453A;
+            --dot-color-6: #5E5CE6;
+            --archive-color: #6B6B6B;
+            --priority-high: #FF453A;
+            --priority-medium: #FF9F0A;
+            --priority-low: #30D158;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            overscroll-behavior: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-width: 1000px;
+        }
+        
+        .bg-card { background-color: var(--bg-card); }
+        .border-custom { border-color: var(--border-color); }
+        .text-secondary { color: var(--text-secondary); }
+        .text-accent { color: var(--accent-color); }
+        .bg-accent { background-color: var(--accent-color); }
+        .bg-accent-light { background-color: var(--accent-color-light); }
+        .placeholder-custom::placeholder { color: var(--text-secondary); opacity: 0.7; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+        /* Sticky Table Styles */
+        .sticky-header th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: var(--bg-card);
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        /* 1st Column (Serial) Sticky */
+        .sticky-col-1 {
+            position: sticky;
+            left: 0;
+            z-index: 5;
+            background-color: var(--bg-card);
+            min-width: 50px;
+            width: 50px;
+        }
+        
+        /* 2nd Column (Topic) Sticky */
+        .sticky-col-2 {
+            position: sticky;
+            left: 50px;
+            z-index: 5;
+            background-color: var(--bg-card);
+            min-width: 200px;
+        }
+        
+        .sticky-col-1, .sticky-col-2 {
+            border-right: 1px solid var(--border-color);
+        }
+        
+        /* Progress Ring */
+        .progress-ring-bg { stroke: var(--border-color); }
+        .progress-ring-fg {
+            stroke: var(--accent-color);
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        /* Status Dots */
+        .status-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .status-dot.complete-1 { background-color: var(--dot-color-1); border-color: var(--dot-color-1); }
+        .status-dot.complete-2 { background-color: var(--dot-color-2); border-color: var(--dot-color-2); }
+        .status-dot.complete-3 { background-color: var(--dot-color-3); border-color: var(--dot-color-3); }
+        .status-dot.complete-4 { background-color: var(--dot-color-4); border-color: var(--dot-color-4); }
+        .status-dot.complete-5 { background-color: var(--dot-color-5); border-color: var(--dot-color-5); }
+        .status-dot.complete-6 { background-color: var(--dot-color-6); border-color: var(--dot-color-6); }
+        
+        /* Note Button */
+        .note-button.has-note {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        /* Tab Styles */
+        .tab-button {
+            padding: 0.5rem 1rem;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .tab-button.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+        }
+
+        /* Archived Row Style */
+        .archived-row {
+            opacity: 0.5;
+            background-color: var(--bg-primary);
+        }
+
+        /* Target Progress Bar */
+        .target-progress-bar {
+            height: 8px;
+            background-color: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .target-progress-fill {
+            height: 100%;
+            background-color: var(--accent-color);
+            transition: width 0.3s ease;
+        }
+
+        /* Allocated Date Display */
+        .allocated-date {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: var(--text-secondary);
+            gap: 2px;
+            margin-top: 4px;
+        }
+
+        /* Task Item Styles */
+        .task-item {
+            transition: all 0.2s ease;
+            cursor: move;
+        }
+        .task-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+        .task-item.drag-over {
+            border-top: 2px solid var(--accent-color);
+        }
+
+        /* Priority Styles */
+        .priority-high { border-left: 4px solid var(--priority-high); }
+        .priority-medium { border-left: 4px solid var(--priority-medium); }
+        .priority-low { border-left: 4px solid var(--priority-low); }
+        
+        .priority-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+        }
+        .priority-dot.high { background-color: var(--priority-high); }
+        .priority-dot.medium { background-color: var(--priority-medium); }
+        .priority-dot.low { background-color: var(--priority-low); }
+
+        /* Heatmap Styles */
+        .heatmap-day {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin: 1px;
+        }
+        .heatmap-0 { background-color: var(--border-color); }
+        .heatmap-1 { background-color: var(--dot-color-1); opacity: 0.3; }
+        .heatmap-2 { background-color: var(--dot-color-1); opacity: 0.5; }
+        .heatmap-3 { background-color: var(--dot-color-1); opacity: 0.7; }
+        .heatmap-4 { background-color: var(--dot-color-1); opacity: 0.9; }
+        .heatmap-5 { background-color: var(--dot-color-1); }
+
+        /* Search Styles */
+        .search-highlight {
+            background-color: yellow;
+            color: black;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        /* Notification Styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+        .notification.success { border-left: 4px solid var(--dot-color-1); }
+        .notification.error { border-left: 4px solid var(--priority-high); }
+        .notification.info { border-left: 4px solid var(--accent-color); }
+
+        /* Loading Animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+        }
+
+        /* Task Time Info */
+        .task-time-info {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .task-duration {
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .task-time-range {
+            display: inline-block;
+        }
+
+        /* Drag Handle */
+        .drag-handle {
+            cursor: move;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        .drag-handle:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <!-- Notification System -->
+    <div id="notification" class="notification hidden">
+        <div class="flex items-center justify-between">
+            <span id="notification-message" class="text-sm font-medium"></span>
+            <button id="notification-close" class="ml-4 text-secondary hover:text-primary">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="w-16 h-16 border-4 border-t-transparent border-white rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-white font-medium">Loading Study Tracker...</p>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto p-4 space-y-4">
+
+        <header class="flex justify-between items-center gap-4">
+            <h1 class="text-3xl font-bold text-accent">GkE Study Tracker v11.4</h1>
+            
+            <!-- Global Search -->
+            <div class="flex-1 max-w-md">
+                <div class="relative">
+                    <input id="global-search" type="text" placeholder="Search topics..." 
+                           class="w-full p-2 pl-10 bg-card border border-custom rounded-lg placeholder-custom">
+                    <svg class="absolute left-3 top-2.5 w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button id="add-topic-btn" title="Add New Topic" class="p-2 rounded-full hover:bg-accent-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+                <button id="settings-btn" title="Settings" class="p-2 rounded-full hover:bg-accent-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <section class="flex flex-col md:flex-row gap-4">
+            <div class="flex-shrink-0 relative w-32 h-32 mx-auto">
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <circle class="progress-ring-bg" stroke-width="10" cx="50" cy="50" r="45" fill="transparent"></circle>
+                    <circle id="progress-ring" class="progress-ring-fg" stroke-width="10" cx="50" cy="50" r="45" fill="transparent" stroke-dasharray="282.74" stroke-dashoffset="282.74"></circle>
+                </svg>
+                <div id="progress-text" class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="text-3xl font-bold">0%</span>
+                    <span id="progress-subject" class="text-sm text-secondary">Loading...</span>
+                </div>
+            </div>
+            <div id="subject-cards" class="flex-grow grid grid-cols-2 gap-4">
+                <div class="loading-pulse bg-card p-4 rounded-lg border border-custom h-24"></div>
+                <div class="loading-pulse bg-card p-4 rounded-lg border border-custom h-24"></div>
+            </div>
+        </section>
+
+        <section class="bg-card p-4 rounded-lg shadow space-y-2">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold">Source</h2>
+                <button id="edit-source-btn" class="p-1 rounded-full hover:bg-accent-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-secondary">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                    </svg>
+                </button>
+            </div>
+            <p id="source-text" class="text-secondary whitespace-pre-wrap">Loading source...</p>
+            <input id="source-input" type="text" class="hidden w-full p-2 bg-transparent border border-custom rounded placeholder-custom" placeholder="Edit source...">
+        </section>
+
+        <section class="bg-card rounded-lg shadow">
+            <div class="border-b border-custom">
+                <div class="flex overflow-x-auto">
+                    <button class="tab-button active" data-tab="daily">Today's Target</button>
+                    <button class="tab-button" data-tab="weekly">Weekly Target</button>
+                    <button class="tab-button" data-tab="custom">Custom</button>
+                    <button class="tab-button" data-tab="history">History & Analytics</button>
+                </div>
+            </div>
+            
+            <div class="p-4">
+                <div id="tab-content">
+                    <div id="daily-tab" class="tab-content">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-secondary">Today's Progress</span>
+                            <span id="daily-progress-text" class="text-sm font-semibold">0%</span>
+                        </div>
+                        <div class="target-progress-bar mb-4">
+                            <div id="daily-progress-fill" class="target-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div id="daily-targets-list" class="space-y-2 max-h-60 overflow-y-auto mb-4">
+                            <div class="loading-pulse bg-card p-4 rounded border border-custom h-12"></div>
+                            <div class="loading-pulse bg-card p-4 rounded border border-custom h-12"></div>
+                        </div>
+                        <button id="add-daily-task-btn" class="w-full p-2 text-sm bg-accent-light text-accent rounded hover:bg-accent hover:text-white transition-colors">
+                            + Add New Task
+                        </button>
+                    </div>
+
+                    <div id="weekly-tab" class="tab-content hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-secondary">Weekly Progress</span>
+                            <span id="weekly-progress-text" class="text-sm font-semibold">0%</span>
+                        </div>
+                        <div class="target-progress-bar mb-4">
+                            <div id="weekly-progress-fill" class="target-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div id="weekly-targets-list" class="space-y-2 max-h-60 overflow-y-auto mb-4">
+                            <div class="loading-pulse bg-card p-4 rounded border border-custom h-12"></div>
+                        </div>
+                         <button id="add-weekly-task-btn" class="w-full p-2 text-sm bg-accent-light text-accent rounded hover:bg-accent hover:text-white transition-colors">
+                            + Add Weekly Task
+                        </button>
+                    </div>
+
+                    <div id="custom-tab" class="tab-content hidden">
+                        <p class="text-secondary text-sm">Custom targets coming soon...</p>
+                    </div>
+
+                    <div id="history-tab" class="tab-content hidden">
+                        <div id="history-list" class="space-y-6">
+                            <div class="loading-pulse bg-card p-4 rounded border border-custom h-64"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="w-full overflow-x-auto rounded-lg shadow bg-card">
+            <table class="w-full min-w-[900px] border-collapse text-sm text-left">
+                <thead class="sticky-header">
+                    <tr>
+                        <th class="sticky-col-1 p-3">#</th>
+                        <th class="sticky-col-2 p-3">Topic</th>
+                        <th class="p-3 text-center min-w-[60px]">Lec</th>
+                        <th class="p-3 text-center min-w-[60px]">1st</th>
+                        <th class="p-3 text-center min-w-[60px]">2nd</th>
+                        <th class="p-3 text-center min-w-[60px]">3rd</th>
+                        <th class="p-3 text-center min-w-[60px]">R1</th>
+                        <th class="p-3 text-center min-w-[60px]">R2</th>
+                        <th class="p-3 text-center min-w-[120px]">Date/Time</th>
+                        <th class="p-3 text-center min-w-[70px]">Note</th>
+                        <th class="p-3 text-center min-w=[70px]">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="topics-table-body">
+                    <tr>
+                        <td colspan="11" class="p-4 text-center text-secondary">
+                            <div class="loading-pulse py-8">Loading topics...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20 p-4">
+        <div class="bg-card rounded-lg shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h2 class="text-xl font-semibold">Settings</h2>
+            
+            <div>
+                <label class="block text-sm font-medium text-secondary">Theme</label>
+                <div class="mt-1 flex gap-2">
+                    <button id="theme-light-btn" class="flex-1 p-2 rounded border border-custom">Light</button>
+                    <button id="theme-dark-btn" class="flex-1 p-2 rounded border border-custom">Dark</button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-secondary">Sync Status</label>
+                <p id="sync-status-text" class="mt-1 p-2 bg-accent-light rounded text-sm">Initializing...</p>
+            </div>
+
+            <button id="settings-done-btn" class="w-full p-2 bg-accent text-white rounded font-semibold">Done</button>
+        </div>
+    </div>
+    
+    <!-- Note Modal -->
+    <div id="note-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-30 p-4">
+        <div class="bg-card rounded-lg shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h2 id="note-modal-title" class="text-xl font-semibold truncate">Note</h2>
+            <textarea id="note-modal-textarea" rows="6" class="w-full p-2 bg-transparent border border-custom rounded placeholder-custom" placeholder="Write your note here..."></textarea>
+            <div class="flex gap-2">
+                <button id="note-modal-cancel-btn" class="flex-1 p-2 rounded border border-custom">Cancel</button>
+                <button id="note-modal-delete-btn" class="p-2 rounded border border-custom text-red-500 hover:bg-red-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                    </svg>
+                </button>
+                <button id="note-modal-save-btn" class="flex-1 p-2 bg-accent text-white rounded font-semibold">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Task Modal -->
+    <div id="add-edit-task-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
+        <div class="bg-card rounded-lg shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h2 id="task-modal-title" class="text-xl font-semibold">New Task</h2>
+            
+            <input type="hidden" id="task-modal-target-id">
+            <input type="hidden" id="task-modal-target-type">
+
+            <div>
+                <label class="block text-sm font-medium text-secondary">Topic</label>
+                <select id="task-modal-topic" class="w-full p-2 bg-transparent border border-custom rounded mt-1">
+                    <option value="">Select Topic...</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-secondary">Step</label>
+                <select id="task-modal-pass-index" class="w-full p-2 bg-transparent border border-custom rounded mt-1">
+                    <option value="1">Lecture (1)</option>
+                    <option value="2">1st Read (2)</option>
+                    <option value="3">2nd Read (3)</option>
+                    <option value="4">3rd Read (4)</option>
+                    <option value="5">Revision 1 (5)</option>
+                    <option value="6">Revision 2 (6)</option>
+                    <option value="">None (Custom Task)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-secondary">Auto-generated Name</label>
+                <p id="task-modal-auto-name" class="mt-1 p-2 bg-accent-light rounded text-sm">Auto: Select topic and step</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-secondary">Custom Name (Optional)</label>
+                <input id="task-modal-display-name" type="text" class="w-full p-2 bg-transparent border border-custom rounded mt-1 placeholder-custom" placeholder="e.g., Bryophyta Lecture Review">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-secondary">Date</label>
+                <input id="task-modal-date" type="date" class="w-full p-2 bg-transparent border border-custom rounded mt-1">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-secondary">Start Time (Optional)</label>
+                    <input id="task-modal-start-time" type="time" class="w-full p-2 bg-transparent border border-custom rounded mt-1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-secondary">End Time (Optional)</label>
+                    <input id="task-modal-end-time" type="time" class="w-full p-2 bg-transparent border border-custom rounded mt-1">
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button id="task-modal-cancel-btn" class="flex-1 p-2 rounded border border-custom">Cancel</button>
+                <button id="task-modal-save-btn" class="flex-1 p-2 bg-accent text-white rounded font-semibold">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Topic Modal -->
+    <div id="add-topic-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
+        <div class="bg-card rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
+            <h2 class="text-xl font-semibold">Add New Topic</h2>
+            
+            <div>
+                <label class="block text-sm font-medium text-secondary mb-1">Topic Title</label>
+                <input id="new-topic-title" type="text" 
+                       class="w-full p-3 bg-transparent border border-custom rounded placeholder-custom"
+                       placeholder="Enter topic title...">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-secondary mb-1">Time/Duration (Optional)</label>
+                <input id="new-topic-duration" type="text" 
+                       class="w-full p-3 bg-transparent border border-custom rounded placeholder-custom"
+                       placeholder="e.g., 3 hours or 2 hours 30 minutes">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-secondary mb-1">Priority</label>
+                <div class="flex gap-2 mt-1">
+                    <button class="priority-btn flex-1 p-2 rounded border border-custom" data-priority="low">
+                        <span class="priority-dot low"></span> Low
+                    </button>
+                    <button class="priority-btn flex-1 p-2 rounded border border-custom" data-priority="medium">
+                        <span class="priority-dot medium"></span> Medium
+                    </button>
+                    <button class="priority-btn flex-1 p-2 rounded border border-custom" data-priority="high">
+                        <span class="priority-dot high"></span> High
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button id="add-topic-cancel-btn" class="flex-1 p-3 rounded border border-custom">Cancel</button>
+                <button id="add-topic-save-btn" class="flex-1 p-3 bg-accent text-white rounded font-semibold">Add Topic</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Topic Modal -->
+    <div id="edit-topic-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
+        <div class="bg-card rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
+            <h2 class="text-xl font-semibold">Edit Topic</h2>
+            
+            <input type="hidden" id="edit-topic-id">
+
+            <div>
+                <label class="block text-sm font-medium text-secondary mb-1">Topic Title</label>
+                <input id="edit-topic-title" type="text" 
+                       class="w-full p-3 bg-transparent border border-custom rounded placeholder-custom"
+                       placeholder="Enter topic title...">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-secondary mb-1">Time/Duration (Optional)</label>
+                <input id="edit-topic-duration" type="text" 
+                       class="w-full p-3 bg-transparent border border-custom rounded placeholder-custom"
+                       placeholder="e.g., 3 hours or 2 hours 30 minutes">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-secondary mb-1">Priority</label>
+                <div class="flex gap-2 mt-1">
+                    <button class="edit-priority-btn flex-1 p-2 rounded border border-custom" data-priority="low">
+                        <span class="priority-dot low"></span> Low
+                    </button>
+                    <button class="edit-priority-btn flex-1 p-2 rounded border border-custom" data-priority="medium">
+                        <span class="priority-dot medium"></span> Medium
+                    </button>
+                    <button class="edit-priority-btn flex-1 p-2 rounded border border-custom" data-priority="high">
+                        <span class="priority-dot high"></span> High
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button id="edit-topic-cancel-btn" class="flex-1 p-3 rounded border border-custom">Cancel</button>
+                <button id="edit-topic-save-btn" class="flex-1 p-3 bg-accent text-white rounded font-semibold">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD8K4BwqwS9vQ-eldA1F865SvSs5Fv2J4M",
+            authDomain: "gkeas-f93ec.firebaseapp.com",
+            projectId: "gkeas-f93ec",
+            storageBucket: "gkeas-f93ec.firebasestorage.app",
+            messagingSenderId: "909744549158",
+            appId: "1:909744549158:web:074ea3a35181960ec3e5e7",
+            measurementId: "G-BR0PX3QGZT"
+        };
+        
+        // Application state
+        const app = {
+            db: null,
+            firestoreDB: null,
+            activeSubjectId: 'gk',
+            isLoading: true,
+            isSyncing: false,
+            currentNoteTopicId: null,
+            currentTaskModal: { targetId: null, type: 'daily' },
+            activeTab: 'daily',
+            selectedPriority: 'medium',
+            editTopicPriority: 'medium',
+            
+            subjects: new Map(),
+            topics: new Map(),
+            readings: new Map(),
+            targets: new Map(),
+
+            listeners: [],
+            searchTerm: '',
+            dragSource: null,
+            isOnline: true
+        };
+        
+        // DOM elements
+        const DOM = {
+            loadingOverlay: document.getElementById('loading-overlay'),
+            subjectCardsContainer: document.getElementById('subject-cards'),
+            progressRing: document.getElementById('progress-ring'),
+            progressText: document.getElementById('progress-text').firstElementChild,
+            progressSubject: document.getElementById('progress-subject'),
+            sourceText: document.getElementById('source-text'),
+            sourceInput: document.getElementById('source-input'),
+            editSourceBtn: document.getElementById('edit-source-btn'),
+            topicsTableBody: document.getElementById('topics-table-body'),
+            globalSearch: document.getElementById('global-search'),
+            
+            settingsModal: document.getElementById('settings-modal'),
+            noteModal: document.getElementById('note-modal'),
+            noteModalTitle: document.getElementById('note-modal-title'),
+            noteModalTextarea: document.getElementById('note-modal-textarea'),
+
+            taskModal: document.getElementById('add-edit-task-modal'),
+            taskModalTitle: document.getElementById('task-modal-title'),
+            taskModalTargetId: document.getElementById('task-modal-target-id'),
+            taskModalTargetType: document.getElementById('task-modal-target-type'),
+            taskModalTopic: document.getElementById('task-modal-topic'),
+            taskModalPassIndex: document.getElementById('task-modal-pass-index'),
+            taskModalDisplayName: document.getElementById('task-modal-display-name'),
+            taskModalAutoName: document.getElementById('task-modal-auto-name'),
+            taskModalDate: document.getElementById('task-modal-date'),
+            taskModalStartTime: document.getElementById('task-modal-start-time'),
+            taskModalEndTime: document.getElementById('task-modal-end-time'),
+            taskModalSaveBtn: document.getElementById('task-modal-save-btn'),
+            taskModalCancelBtn: document.getElementById('task-modal-cancel-btn'),
+
+            addTopicModal: document.getElementById('add-topic-modal'),
+            newTopicTitle: document.getElementById('new-topic-title'),
+            newTopicDuration: document.getElementById('new-topic-duration'),
+            addTopicSaveBtn: document.getElementById('add-topic-save-btn'),
+            addTopicCancelBtn: document.getElementById('add-topic-cancel-btn'),
+
+            editTopicModal: document.getElementById('edit-topic-modal'),
+            editTopicId: document.getElementById('edit-topic-id'),
+            editTopicTitle: document.getElementById('edit-topic-title'),
+            editTopicDuration: document.getElementById('edit-topic-duration'),
+            editTopicSaveBtn: document.getElementById('edit-topic-save-btn'),
+            editTopicCancelBtn: document.getElementById('edit-topic-cancel-btn'),
+
+            notification: document.getElementById('notification'),
+            notificationMessage: document.getElementById('notification-message'),
+            notificationClose: document.getElementById('notification-close')
+        };
+
+        // IndexedDB Manager
+        class IndexedDBManager {
+            constructor() {
+                this.dbName = 'GkETrackerDB';
+                this.db = null;
+            }
+
+            async open() {
+                return new Promise((resolve, reject) => {
+                    // First, check the current version
+                    const checkRequest = indexedDB.open(this.dbName);
+                    checkRequest.onsuccess = (event) => {
+                        const db = event.target.result;
+                        const currentVersion = db.version;
+                        db.close();
+                        
+                        // Open with current version to avoid version conflicts
+                        const request = indexedDB.open(this.dbName, currentVersion);
+                        
+                        request.onerror = () => reject(request.error);
+                        request.onsuccess = () => {
+                            this.db = request.result;
+                            resolve(this.db);
+                        };
+                        
+                        request.onupgradeneeded = (event) => {
+                            const db = event.target.result;
+                            this.createStores(db, event.oldVersion);
+                        };
+                    };
+                    
+                    checkRequest.onerror = () => {
+                        // If database doesn't exist, create with version 1
+                        const request = indexedDB.open(this.dbName, 1);
+                        
+                        request.onerror = () => reject(request.error);
+                        request.onsuccess = () => {
+                            this.db = request.result;
+                            resolve(this.db);
+                        };
+                        
+                        request.onupgradeneeded = (event) => {
+                            const db = event.target.result;
+                            this.createStores(db, 0);
+                        };
+                    };
+                });
+            }
+
+            createStores(db, oldVersion) {
+                // Create object stores if they don't exist
+                if (!db.objectStoreNames.contains('subjects')) {
+                    const subjectsStore = db.createObjectStore('subjects', { keyPath: 'id' });
+                    subjectsStore.createIndex('updatedAt', 'updatedAt');
+                }
+                
+                if (!db.objectStoreNames.contains('topics')) {
+                    const topicsStore = db.createObjectStore('topics', { keyPath: 'id' });
+                    topicsStore.createIndex('subjectId', 'subjectId');
+                    topicsStore.createIndex('updatedAt', 'updatedAt');
+                }
+                
+                if (!db.objectStoreNames.contains('readings')) {
+                    const readingsStore = db.createObjectStore('readings', { keyPath: 'id' });
+                    readingsStore.createIndex('topicId', 'topicId');
+                    readingsStore.createIndex('updatedAt', 'updatedAt');
+                }
+                
+                if (!db.objectStoreNames.contains('targets')) {
+                    const targetsStore = db.createObjectStore('targets', { keyPath: 'id' });
+                    targetsStore.createIndex('type', 'type');
+                    targetsStore.createIndex('date', 'date');
+                    targetsStore.createIndex('updatedAt', 'updatedAt');
+                }
+
+                // Handle data migrations for existing stores
+                if (oldVersion > 0 && oldVersion < 7) {
+                    this.migrateData(db, oldVersion);
+                }
+            }
+
+            migrateData(db, oldVersion) {
+                const transaction = db.transaction(['topics', 'targets', 'readings'], 'readwrite');
+                
+                // Add priority field to topics (v7 migration)
+                if (oldVersion < 7) {
+                    const topicsStore = transaction.objectStore('topics');
+                    const topicsRequest = topicsStore.openCursor();
+                    
+                    topicsRequest.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            const topic = cursor.value;
+                            if (typeof topic.priority === 'undefined') {
+                                topic.priority = 'medium';
+                                cursor.update(topic);
+                            }
+                            cursor.continue();
+                        }
+                    };
+                }
+                
+                // Add displayName and passIndex fields to targets (v7 migration)
+                if (oldVersion < 7) {
+                    const targetsStore = transaction.objectStore('targets');
+                    const targetsRequest = targetsStore.openCursor();
+                    
+                    targetsRequest.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            const target = cursor.value;
+                            if (typeof target.displayName === 'undefined') {
+                                target.displayName = null;
+                            }
+                            if (typeof target.passIndex === 'undefined') {
+                                target.passIndex = null;
+                            }
+                            cursor.update(target);
+                        }
+                    };
+                }
+                
+                // Add allocatedDate field to readings (v7 migration)
+                if (oldVersion < 7) {
+                    const readingsStore = transaction.objectStore('readings');
+                    const readingsRequest = readingsStore.openCursor();
+                    
+                    readingsRequest.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            const reading = cursor.value;
+                            if (typeof reading.allocatedDate === 'undefined') {
+                                reading.allocatedDate = null;
+                            }
+                            cursor.update(reading);
+                        }
+                    };
+                }
+            }
+
+            async getAll(storeName) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.getAll();
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+
+            async put(storeName, data) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.put(data);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+
+            async get(storeName, key) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.get(key);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+
+            async delete(storeName, key) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.delete(key);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+
+            async clear(storeName) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.clear();
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+        }
+
+        // Initialize IndexedDB
+        async function initIndexedDB() {
+            app.db = new IndexedDBManager();
+            await app.db.open();
+            console.log("IndexedDB initialized successfully");
+        }
+
+        // Format duration helper function
+        function formatDuration(durationStr) {
+            if (!durationStr) return null;
+            
+            const hoursMatch = durationStr.match(/(\d+)\s*hours?/);
+            const minutesMatch = durationStr.match(/(\d+)\s*minutes?/);
+            
+            let hours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
+            let minutes = minutesMatch ? parseInt(minutesMatch[1]) : 0;
+            
+            if (!hoursMatch && durationStr.includes('hour')) {
+                const decimalMatch = durationStr.match(/(\d+\.?\d*)\s*hours?/);
+                if (decimalMatch) {
+                    const decimal = parseFloat(decimalMatch[1]);
+                    hours = Math.floor(decimal);
+                    minutes = Math.round((decimal - hours) * 60);
+                }
+            }
+            
+            const parts = [];
+            if (hours > 0) parts.push(`${hours}h`);
+            if (minutes > 0) parts.push(`${minutes}m`);
+            
+            return parts.length > 0 ? parts.join(' ') : null;
+        }
+
+        // Format time for display
+        function formatTimeForDisplay(timeStr) {
+            if (!timeStr) return null;
+            
+            try {
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                const period = hours >= 12 ? 'PM' : 'AM';
+                const displayHours = hours % 12 || 12;
+                return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+            } catch (e) {
+                return timeStr;
+            }
+        }
+
+        // Generate time info HTML for tasks
+        function generateTaskTimeInfo(target) {
+            const topic = app.topics.get(target.topicId);
+            let timeInfo = '';
+            
+            const duration = topic?.dateTime ? formatDuration(topic.dateTime) : null;
+            const startTime = target.startTime ? formatTimeForDisplay(target.startTime) : null;
+            const endTime = target.endTime ? formatTimeForDisplay(target.endTime) : null;
+            
+            if (duration || startTime) {
+                timeInfo = '<div class="task-time-info">';
+                
+                if (duration) {
+                    timeInfo += `<span class="task-duration">Est: ${duration}</span>`;
+                }
+                
+                if (startTime && endTime) {
+                    timeInfo += `<span class="task-time-range">${startTime} - ${endTime}</span>`;
+                } else if (startTime) {
+                    timeInfo += `<span class="task-time-range">Start: ${startTime}</span>`;
+                }
+                
+                timeInfo += '</div>';
+            }
+            
+            return timeInfo;
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info', duration = 4000) {
+            DOM.notificationMessage.textContent = message;
+            DOM.notification.className = `notification ${type}`;
+            DOM.notification.classList.remove('hidden');
+            DOM.notification.classList.add('show');
+            
+            setTimeout(() => {
+                hideNotification();
+            }, duration);
+        }
+
+        function hideNotification() {
+            DOM.notification.classList.remove('show');
+            setTimeout(() => {
+                DOM.notification.classList.add('hidden');
+            }, 300);
+        }
+
+        // Main initialization function
+        async function main() {
+            console.log("Starting GkE Study Tracker v11.4...");
+            showLoading(true);
+            
+            try {
+                initTheme();
+                initFirebase();
+                await initIndexedDB();
+                await loadDataFromIndexedDB();
+                await ensureDefaultSubjects();
+                initFirestoreSync();
+                
+                registerEventListeners();
+                renderAll();
+                showLoading(false);
+                
+                console.log("GkE Study Tracker initialized successfully!");
+                showNotification("Study Tracker loaded successfully!", "success", 3000);
+            } catch (error) {
+                console.error("Failed to initialize app:", error);
+                showLoading(false);
+                showNotification("Failed to load application. Please refresh the page.", "error");
+            }
+        }
+
+        function initFirebase() {
+            try {
+                const firebaseApp = firebase.initializeApp(firebaseConfig);
+                app.firestoreDB = firebase.firestore();
+                console.log("Firebase initialized successfully");
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                document.getElementById('sync-status-text').textContent = "Firebase connection failed";
+            }
+        }
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('gke-theme') || 'light';
+            setTheme(savedTheme);
+        }
+
+        async function loadDataFromIndexedDB() {
+            console.log("Loading data from IndexedDB...");
+            try {
+                const [subjectsArr, topicsArr, readingsArr, targetsArr] = await Promise.all([
+                    app.db.getAll('subjects'),
+                    app.db.getAll('topics'),
+                    app.db.getAll('readings'),
+                    app.db.getAll('targets')
+                ]);
+                
+                app.subjects = new Map(subjectsArr.map(s => [s.id, s]));
+                app.topics = new Map(topicsArr.map(t => [t.id, t]));
+                app.readings = new Map(readingsArr.map(r => [r.id, r]));
+                app.targets = new Map(targetsArr.map(t => [t.id, t]));
+                
+                if (app.subjects.size > 0 && !app.subjects.has(app.activeSubjectId)) {
+                    app.activeSubjectId = app.subjects.keys().next().value;
+                }
+                
+                console.log(`Loaded ${app.subjects.size} subjects, ${app.topics.size} topics, ${app.readings.size} readings, ${app.targets.size} targets`);
+            } catch (error) {
+                console.error("Error loading data from IndexedDB:", error);
+                throw error;
+            }
+        }
+
+        async function ensureDefaultSubjects() {
+            if (app.subjects.size === 0) {
+                console.log("No subjects found, creating defaults...");
+                const timestamp = new Date();
+                const defaultSubjects = [
+                    { id: 'gk', name: 'General Knowledge', source: 'Default study materials', order: 1, updatedAt: timestamp },
+                    { id: 'eng', name: 'English', source: 'Default study materials', order: 2, updatedAt: timestamp }
+                ];
+                
+                for (const subject of defaultSubjects) {
+                    await app.db.put('subjects', subject);
+                    await syncToFirestore('subjects', subject.id, subject);
+                }
+                await loadDataFromIndexedDB();
+            }
+        }
+        
+        function getActiveTopics() {
+            return Array.from(app.topics.values())
+                .filter(t => t.subjectId === app.activeSubjectId)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+        }
+
+        function renderAll() {
+            console.log("Rendering all components...");
+            renderSubjects();
+            renderProgress();
+            renderSource();
+            renderTopicsTable();
+            renderTargets();
+            
+            if (app.activeTab === 'history') {
+                renderHistoryTab();
+            }
+        }
+
+        function renderSubjects() {
+            let html = '';
+            app.subjects.forEach(subject => {
+                const isActive = subject.id === app.activeSubjectId;
+                html += `
+                    <button 
+                        class="subject-card w-full p-4 rounded-lg border text-left transition-all ${isActive ? 'bg-accent text-white' : 'bg-card border-custom hover:bg-accent-light'}"
+                        data-id="${subject.id}"
+                    >
+                        <span class="text-xl font-semibold">${subject.name}</span>
+                        <p class="text-sm ${isActive ? 'text-white' : 'text-secondary'}">Click to view</p>
+                    </button>
+                `;
+            });
+            DOM.subjectCardsContainer.innerHTML = html;
+        }
+
+        function renderProgress() {
+            const activeTopics = getActiveTopics().filter(t => !t.archived);
+            const totalPossibleReadings = activeTopics.length * 6;
+            let completedReadings = 0;
+            
+            activeTopics.forEach(topic => {
+                for (let i = 1; i <= 6; i++) {
+                    const readingId = `${topic.id}_${i}`;
+                    if (app.readings.has(readingId) && app.readings.get(readingId).complete) {
+                        completedReadings++;
+                    }
+                }
+            });
+
+            const percentage = totalPossibleReadings === 0 ? 0 : Math.round((completedReadings / totalPossibleReadings) * 100);
+            
+            const radius = 45;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (percentage / 100) * circumference;
+            
+            if (DOM.progressRing) {
+                DOM.progressRing.style.strokeDashoffset = offset;
+            }
+            
+            DOM.progressText.textContent = `${percentage}%`;
+            DOM.progressSubject.textContent = app.subjects.get(app.activeSubjectId)?.name || 'No Subject';
+        }
+
+        function renderSource() {
+            const subject = app.subjects.get(app.activeSubjectId);
+            if (subject) {
+                DOM.sourceText.textContent = subject.source || '(No source set)';
+                DOM.sourceInput.value = subject.source;
+            }
+        }
+
+        function renderTopicsTable() {
+            const topics = getActiveTopics();
+            let html = '';
+            
+            if (topics.length === 0) {
+                html = '<tr><td colspan="11" class="p-4 text-center text-secondary">No topics added for this subject. Click the + button to add one.</td></tr>';
+            } else {
+                const filteredTopics = topics.filter(topic => {
+                    if (!app.searchTerm) return true;
+                    return topic.title.toLowerCase().includes(app.searchTerm);
+                });
+
+                filteredTopics.forEach((topic, index) => {
+                    const isArchived = topic.archived || false;
+                    const priorityClass = topic.priority ? `priority-${topic.priority}` : '';
+                    
+                    let dotsHtml = '';
+                    for (let i = 1; i <= 6; i++) {
+                        const readingId = `${topic.id}_${i}`;
+                        const reading = app.readings.get(readingId);
+                        const isComplete = reading?.complete || false;
+                        const allocatedDate = reading?.allocatedDate || null;
+                        
+                        let dateHtml = '';
+                        if (allocatedDate) {
+                            dateHtml = `
+                                <div class="allocated-date">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                                    </svg>
+                                    ${formatDateSimple(allocatedDate)}
+                                </div>`;
+                        }
+                        
+                        const colorClass = `complete-${(i-1) % 6 + 1}`;
+                        
+                        dotsHtml += `
+                            <td class="p-3 text-center">
+                                <div 
+                                    class="status-dot mx-auto ${isComplete ? colorClass : ''}"
+                                    data-topic-id="${topic.id}"
+                                    data-pass-index="${i}"
+                                ></div>
+                                ${dateHtml}
+                            </td>
+                        `;
+                    }
+                    
+                    const hasNote = topic.note && topic.note.trim() !== '';
+                    const dateTimeStr = topic.dateTime ? formatDateTime(topic.dateTime) : '';
+                    
+                    let displayTitle = topic.title;
+                    if (app.searchTerm) {
+                        const regex = new RegExp(`(${app.searchTerm})`, 'gi');
+                        displayTitle = topic.title.replace(regex, '<span class="search-highlight">$1</span>');
+                    }
+
+                    const priorityDot = topic.priority ? 
+                        `<span class="priority-dot ${topic.priority}" title="${topic.priority} priority"></span>` : '';
+
+                    html += `
+                        <tr class="border-b border-custom last:border-b-0 ${isArchived ? 'archived-row' : ''} ${priorityClass}">
+                            <td class="sticky-col-1 p-3 text-center text-secondary">${index + 1}</td>
+                            <td class="sticky-col-2 p-3 font-medium">
+                                ${priorityDot}
+                                <span class="topic-title">${displayTitle}</span>
+                                <button class="edit-topic-btn p-1 hover:bg-accent-light rounded" data-topic-id="${topic.id}" title="Edit Topic">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-secondary">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                                    </svg>
+                                </button>
+                                <button class="priority-btn p-1 hover:bg-accent-light rounded" data-topic-id="${topic.id}" title="Change Priority">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-secondary">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                                    </svg>
+                                </button>
+                            </td>
+                            ${dotsHtml}
+                            <td class="p-3 text-center text-xs text-secondary">${dateTimeStr}</td>
+                            <td class="p-3 text-center">
+                                <button 
+                                    class="note-button text-sm ${hasNote ? 'has-note' : 'text-secondary'}"
+                                    data-topic-id="${topic.id}"
+                                >
+                                    ${hasNote ? 'View' : 'Add'}
+                                </button>
+                            </td>
+                            <td class="p-3 text-center">
+                                <div class="flex items-center justify-center gap-1">
+                                    <button class="archive-btn p-1 hover:bg-accent-light rounded" data-topic-id="${topic.id}" title="${topic.archived ? 'Unarchive' : 'Archive'}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4" style="color: var(--archive-color)">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                                        </svg>
+                                    </button>
+                                    <button class="delete-topic-btn p-1 hover:bg-red-50 rounded" data-topic-id="${topic.id}" title="Delete">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-red-500">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                if (filteredTopics.length === 0) {
+                    html = '<tr><td colspan="11" class="p-4 text-center text-secondary">No topics found matching your search.</td></tr>';
+                }
+            }
+            DOM.topicsTableBody.innerHTML = html;
+        }
+
+        function renderTargets() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Daily Targets
+            const dailyTargets = Array.from(app.targets.values())
+                .filter(t => t.type === 'daily' && t.date === today)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+            
+            const completedDaily = dailyTargets.filter(t => t.completed).length;
+            const dailyPercentage = dailyTargets.length > 0 ? Math.round((completedDaily / dailyTargets.length) * 100) : 0;
+            
+            document.getElementById('daily-progress-text').textContent = `${dailyPercentage}%`;
+            document.getElementById('daily-progress-fill').style.width = `${dailyPercentage}%`;
+            document.getElementById('daily-targets-list').innerHTML = generateTargetListHtml(dailyTargets);
+            
+            // Weekly Targets with proper date filtering
+            const weeklyTargets = Array.from(app.targets.values())
+                .filter(t => t.type === 'weekly' && isDateInCurrentWeek(t.date))
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+            
+            const completedWeekly = weeklyTargets.filter(t => t.completed).length;
+            const weeklyPercentage = weeklyTargets.length > 0 ? Math.round((completedWeekly / weeklyTargets.length) * 100) : 0;
+
+            document.getElementById('weekly-progress-text').textContent = `${weeklyPercentage}%`;
+            document.getElementById('weekly-progress-fill').style.width = `${weeklyPercentage}%`;
+            document.getElementById('weekly-targets-list').innerHTML = generateTargetListHtml(weeklyTargets);
+        }
+
+        // Enhanced task display with time information and edit button
+        function generateTargetListHtml(targets) {
+            let html = '';
+            if (targets.length === 0) {
+                html = '<p class="text-secondary text-sm px-2">No targets added.</p>';
+            } else {
+                targets.forEach(target => {
+                    const topic = app.topics.get(target.topicId);
+                    let taskDisplay = target.displayName || target.taskName;
+                    
+                    if (!target.displayName && topic) {
+                         taskDisplay = `${topic.title} - ${target.taskName}`;
+                    } else if (!topic && !target.displayName) {
+                        taskDisplay = target.taskName || 'Custom Task';
+                    }
+
+                    // Generate time information
+                    const timeInfo = generateTaskTimeInfo(target);
+
+                    html += `
+                        <div class="task-item flex items-center justify-between p-2 rounded ${target.completed ? 'bg-accent-light' : 'bg-card border border-custom'}" 
+                             draggable="true" data-target-id="${target.id}">
+                            <div class="flex items-center gap-2 flex-1">
+                                <div class="drag-handle text-secondary cursor-move opacity-50 hover:opacity-100">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-sm ${target.completed ? 'line-through text-secondary' : ''}">${taskDisplay}</div>
+                                    ${timeInfo}
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0 flex items-center gap-1">
+                                <button class="toggle-target-btn p-1 hover:bg-accent-light rounded" data-target-id="${target.id}" title="Toggle Complete">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="${target.completed ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-accent">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </button>
+                                <!-- Edit button -->
+                                <button class="edit-target-btn p-1 text-blue-500 hover:bg-blue-50 rounded" data-target-id="${target.id}" title="Edit Task">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                    </svg>
+                                </button>
+                                <button class="delete-target-btn p-1 text-red-500 hover:bg-red-50 rounded" data-target-id="${target.id}" title="Delete Task">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            return html;
+        }
+
+        // Drag and drop functionality for task reordering
+        function initDragAndDrop() {
+            const dailyList = document.getElementById('daily-targets-list');
+            const weeklyList = document.getElementById('weekly-targets-list');
+            
+            [dailyList, weeklyList].forEach(list => {
+                if (!list) return;
+                
+                list.addEventListener('dragstart', handleDragStart);
+                list.addEventListener('dragover', handleDragOver);
+                list.addEventListener('dragenter', handleDragEnter);
+                list.addEventListener('dragleave', handleDragLeave);
+                list.addEventListener('drop', handleDrop);
+                list.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        function handleDragStart(e) {
+            if (!e.target.classList.contains('task-item')) return;
+            
+            const taskItem = e.target;
+            app.dragSource = taskItem;
+            taskItem.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', taskItem.dataset.targetId);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDragEnter(e) {
+            if (!e.target.classList.contains('task-item') || e.target === app.dragSource) return;
+            e.target.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            if (!e.target.classList.contains('task-item')) return;
+            e.target.classList.remove('drag-over');
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+            if (!e.target.classList.contains('task-item') || !app.dragSource) return;
+            
+            const draggedId = app.dragSource.dataset.targetId;
+            const targetId = e.target.dataset.targetId;
+            
+            if (draggedId === targetId) return;
+            
+            const container = e.target.closest('[id$="-targets-list"]');
+            const tasks = Array.from(container.querySelectorAll('.task-item'));
+            
+            const draggedIndex = tasks.findIndex(task => task.dataset.targetId === draggedId);
+            const targetIndex = tasks.findIndex(task => task.dataset.targetId === targetId);
+            
+            if (draggedIndex === -1 || targetIndex === -1) return;
+            
+            if (draggedIndex < targetIndex) {
+                container.insertBefore(app.dragSource, tasks[targetIndex].nextSibling);
+            } else {
+                container.insertBefore(app.dragSource, tasks[targetIndex]);
+            }
+            
+            await updateTaskOrder(container.id.replace('-targets-list', ''), tasks);
+        }
+
+        function handleDragEnd(e) {
+            if (!e.target.classList.contains('task-item')) return;
+            
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.task-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+            app.dragSource = null;
+        }
+
+        async function updateTaskOrder(type, taskElements) {
+            if (app.isSyncing) return;
+            app.isSyncing = true;
+            
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const isDaily = type === 'daily';
+                
+                const currentDate = isDaily ? today : null;
+                
+                const batch = app.firestoreDB.batch();
+                let indexedDBPromises = [];
+                
+                taskElements.forEach((taskElement, index) => {
+                    const targetId = taskElement.dataset.targetId;
+                    const target = app.targets.get(targetId);
+                    
+                    if (target && target.order !== index) {
+                        const updatedTarget = { ...target, order: index, updatedAt: new Date() };
+                        indexedDBPromises.push(app.db.put('targets', updatedTarget));
+                        app.targets.set(targetId, updatedTarget);
+                        
+                        const docRef = app.firestoreDB.collection('targets').doc(targetId);
+                        batch.set(docRef, updatedTarget);
+                    }
+                });
+                
+                await Promise.all(indexedDBPromises);
+                if (indexedDBPromises.length > 0) await batch.commit();
+                
+                showNotification("Tasks reordered successfully!", "success");
+                
+            } catch (error) {
+                console.error("Failed to reorder tasks:", error);
+                showNotification("Error reordering tasks. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+
+        function registerEventListeners() {
+            // Tabs
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('hidden'));
+                    const tabId = e.currentTarget.dataset.tab;
+                    document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+                    app.activeTab = tabId;
+                    
+                    if (tabId === 'history') {
+                        renderHistoryTab();
+                    }
+                });
+            });
+
+            // Subject cards
+            DOM.subjectCardsContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.subject-card');
+                if (card) handleChangeSubject(card.dataset.id);
+            });
+            
+            // Source editing
+            DOM.editSourceBtn.addEventListener('click', handleEditSource);
+            DOM.sourceInput.addEventListener('blur', handleSaveSource);
+            DOM.sourceInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') e.target.blur();
+            });
+
+            // Topics table interactions
+            DOM.topicsTableBody.addEventListener('click', (e) => {
+                const dot = e.target.closest('.status-dot');
+                const noteBtn = e.target.closest('.note-button');
+                const editBtn = e.target.closest('.edit-topic-btn');
+                const priorityBtn = e.target.closest('.priority-btn');
+                const archiveBtn = e.target.closest('.archive-btn');
+                const deleteBtn = e.target.closest('.delete-topic-btn');
+                
+                if (dot) {
+                    handleToggleReadingStatus(dot.dataset.topicId, parseInt(dot.dataset.passIndex), null);
+                }
+                if (noteBtn) {
+                    handleOpenNoteModal(noteBtn.dataset.topicId);
+                }
+                if (editBtn) {
+                    handleOpenEditTopicModal(editBtn.dataset.topicId);
+                }
+                if (priorityBtn && priorityBtn.dataset.topicId) {
+                    handleChangePriority(priorityBtn.dataset.topicId);
+                }
+                if (archiveBtn) {
+                    handleArchiveTopic(archiveBtn.dataset.topicId);
+                }
+                if (deleteBtn) {
+                    handleDeleteTopic(deleteBtn.dataset.topicId);
+                }
+            });
+
+            // Targets list interactions - UPDATED to handle edit button
+            document.getElementById('daily-targets-list').addEventListener('click', handleTargetListClick);
+            document.getElementById('weekly-targets-list').addEventListener('click', handleTargetListClick);
+            
+            // Add Task buttons
+            document.getElementById('add-daily-task-btn').addEventListener('click', () => handleOpenTaskModal('daily'));
+            document.getElementById('add-weekly-task-btn').addEventListener('click', () => handleOpenTaskModal('weekly'));
+
+            // Task Modal
+            DOM.taskModalSaveBtn.addEventListener('click', handleSaveTask);
+            DOM.taskModalCancelBtn.addEventListener('click', () => toggleTaskModal(false));
+            DOM.taskModalTopic.addEventListener('change', updateAutoTaskName);
+            DOM.taskModalPassIndex.addEventListener('change', updateAutoTaskName);
+
+            // Add Topic Modal
+            document.getElementById('add-topic-btn').addEventListener('click', handleOpenAddTopicModal);
+            DOM.addTopicSaveBtn.addEventListener('click', handleAddTopicSave);
+            DOM.addTopicCancelBtn.addEventListener('click', () => toggleAddTopicModal(false));
+            
+            document.querySelectorAll('.priority-btn[data-priority]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    app.selectedPriority = e.currentTarget.dataset.priority;
+                    updatePriorityButtons();
+                });
+            });
+
+            // Edit Topic Modal
+            DOM.editTopicSaveBtn.addEventListener('click', handleEditTopicSave);
+            DOM.editTopicCancelBtn.addEventListener('click', () => toggleEditTopicModal(false));
+            
+            document.querySelectorAll('.edit-priority-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    app.editTopicPriority = e.currentTarget.dataset.priority;
+                    updateEditPriorityButtons();
+                });
+            });
+
+            // Settings
+            document.getElementById('settings-btn').addEventListener('click', () => toggleSettingsModal(true));
+            document.getElementById('settings-done-btn').addEventListener('click', () => toggleSettingsModal(false));
+            document.getElementById('theme-light-btn').addEventListener('click', () => setTheme('light'));
+            document.getElementById('theme-dark-btn').addEventListener('click', () => setTheme('dark'));
+
+            // Note Modal
+            document.getElementById('note-modal-cancel-btn').addEventListener('click', () => toggleNoteModal(false));
+            document.getElementById('note-modal-save-btn').addEventListener('click', handleSaveNote);
+            document.getElementById('note-modal-delete-btn').addEventListener('click', handleDeleteNote);
+
+            // Global Search
+            DOM.globalSearch.addEventListener('input', (e) => {
+                app.searchTerm = e.target.value.toLowerCase().trim();
+                renderTopicsTable();
+            });
+
+            // Notification close
+            DOM.notificationClose.addEventListener('click', hideNotification);
+
+            // Initialize drag and drop after a short delay to ensure DOM is ready
+            setTimeout(initDragAndDrop, 500);
+        }
+        
+        // Handle edit button in target lists
+        function handleTargetListClick(e) {
+            const toggleBtn = e.target.closest('.toggle-target-btn');
+            const deleteBtn = e.target.closest('.delete-target-btn');
+            const editBtn = e.target.closest('.edit-target-btn');
+            
+            if (toggleBtn) {
+                handleToggleTarget(toggleBtn.dataset.targetId);
+            }
+            if (deleteBtn) {
+                handleDeleteTarget(deleteBtn.dataset.targetId);
+            }
+            if (editBtn) {
+                const targetId = editBtn.dataset.targetId;
+                const target = app.targets.get(targetId);
+                if (target) {
+                    handleOpenTaskModal(target.type, target.id);
+                }
+            }
+        }
+
+        function handleChangeSubject(subjectId) {
+            if (subjectId === app.activeSubjectId) return;
+            app.activeSubjectId = subjectId;
+            renderAll();
+        }
+        
+        // Enhanced Two-Way Sync with proper error handling
+        async function handleToggleReadingStatus(topicId, passIndex, forceStatus = null) {
+            if (app.isSyncing) {
+                console.log("Sync in progress, skipping...");
+                return;
+            }
+            app.isSyncing = true;
+            
+            try {
+                passIndex = parseInt(passIndex);
+                const readingId = `${topicId}_${passIndex}`;
+                const existingReading = app.readings.get(readingId);
+                
+                let newStatus;
+                
+                if (forceStatus !== null) {
+                    newStatus = forceStatus;
+                } else {
+                    newStatus = !(existingReading?.complete || false);
+                }
+
+                // State check to prevent unnecessary updates
+                if (existingReading && existingReading.complete === newStatus) {
+                    console.log("Reading status already set to desired state.");
+                    return;
+                }
+
+                const readingData = {
+                    id: readingId,
+                    topicId: topicId,
+                    passIndex: passIndex,
+                    complete: newStatus,
+                    updatedAt: new Date(),
+                    allocatedDate: existingReading?.allocatedDate || null
+                };
+                
+                await app.db.put('readings', readingData);
+                app.readings.set(readingId, readingData);
+                await syncToFirestore('readings', readingId, readingData);
+                
+                // Fixed: Cascading untick now works for both table and goal card
+                if (newStatus === false) {
+                    const batch = app.firestoreDB.batch();
+                    let indexedDBPromises = [];
+
+                    for (let i = passIndex + 1; i <= 6; i++) {
+                        const nextReadingId = `${topicId}_${i}`;
+                        const nextReading = app.readings.get(nextReadingId);
+                        if (nextReading && nextReading.complete) {
+                            const updatedNext = { ...nextReading, complete: false, updatedAt: new Date() };
+                            
+                            indexedDBPromises.push(app.db.put('readings', updatedNext));
+                            app.readings.set(nextReadingId, updatedNext);
+                            
+                            const docRef = app.firestoreDB.collection('readings').doc(nextReadingId);
+                            batch.set(docRef, updatedNext);
+                        }
+                    }
+                    await Promise.all(indexedDBPromises);
+                    if (indexedDBPromises.length > 0) await batch.commit();
+                }
+                
+                // Spaced Repetition Scheduler
+                if (newStatus === true) {
+                    await scheduleSpacedRepetition(topicId, passIndex);
+                }
+                
+                // Table → Goal Card Sync
+                const targetsToUpdate = Array.from(app.targets.values())
+                    .filter(t => t.topicId === topicId && t.passIndex === passIndex);
+                    
+                if (targetsToUpdate.length > 0) {
+                    const batch = app.firestoreDB.batch();
+                    let indexedDBPromises = [];
+
+                    for (const target of targetsToUpdate) {
+                        if (target.completed !== newStatus) {
+                            const updatedTarget = { ...target, completed: newStatus, updatedAt: new Date() };
+                            indexedDBPromises.push(app.db.put('targets', updatedTarget));
+                            app.targets.set(target.id, updatedTarget);
+                            
+                            const docRef = app.firestoreDB.collection('targets').doc(target.id);
+                            batch.set(docRef, updatedTarget);
+                        }
+                    }
+                    await Promise.all(indexedDBPromises);
+                    if (indexedDBPromises.length > 0) await batch.commit();
+                }
+                
+                renderTopicsTable();
+                renderProgress();
+                renderTargets();
+                
+            } catch (error) {
+                console.error("Failed to toggle reading status:", error);
+                showNotification("Error updating reading status. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+
+        // Spaced Repetition Scheduler
+        async function scheduleSpacedRepetition(topicId, completedPassIndex) {
+            const topic = app.topics.get(topicId);
+            if (!topic) return;
+
+            let nextPassIndex = null;
+            let daysToAdd = 0;
+
+            // Define spaced repetition intervals
+            switch (completedPassIndex) {
+                case 2: // 1st Read completed → Schedule R1 in 3 days
+                    nextPassIndex = 5;
+                    daysToAdd = 3;
+                    break;
+                case 3: // 2nd Read completed → Schedule R2 in 7 days
+                    nextPassIndex = 6;
+                    daysToAdd = 7;
+                    break;
+                case 4: // 3rd Read completed → Optional: Schedule another revision in 14 days
+                    // nextPassIndex = 6; // You can customize this
+                    // daysToAdd = 14;
+                    break;
+                default:
+                    return; // No automatic scheduling for other passes
+            }
+
+            if (nextPassIndex && daysToAdd > 0) {
+                const futureDate = new Date();
+                futureDate.setDate(futureDate.getDate() + daysToAdd);
+                const dateStr = getISODateString(futureDate);
+
+                const targetId = generateUUID();
+                const passOption = DOM.taskModalPassIndex.querySelector(`option[value="${nextPassIndex}"]`);
+                const passName = passOption ? passOption.textContent.split(' (')[0] : 'Revision';
+
+                const targetData = {
+                    id: targetId,
+                    type: 'daily',
+                    topicId: topicId,
+                    passIndex: nextPassIndex,
+                    taskName: `${topic.title} - ${passName}`,
+                    displayName: `Auto: ${topic.title} - ${passName}`,
+                    date: dateStr,
+                    startTime: null,
+                    endTime: null,
+                    durationMinutes: null,
+                    order: 0,
+                    completed: false,
+                    updatedAt: new Date()
+                };
+
+                await app.db.put('targets', targetData);
+                app.targets.set(targetId, targetData);
+                await syncToFirestore('targets', targetId, targetData);
+
+                console.log(`Scheduled ${passName} for ${dateStr}`);
+                showNotification(`Scheduled ${passName} for ${formatDateSimple(dateStr)}`, "success");
+            }
+        }
+
+        // Add Topic functionality with new modal
+        function handleOpenAddTopicModal() {
+            DOM.newTopicTitle.value = '';
+            DOM.newTopicDuration.value = '';
+            app.selectedPriority = 'medium';
+            updatePriorityButtons();
+            toggleAddTopicModal(true);
+        }
+
+        function updatePriorityButtons() {
+            document.querySelectorAll('.priority-btn[data-priority]').forEach(btn => {
+                const isSelected = btn.dataset.priority === app.selectedPriority;
+                btn.classList.toggle('bg-accent-light', isSelected);
+                btn.classList.toggle('text-accent', isSelected);
+                btn.classList.toggle('border-accent', isSelected);
+            });
+        }
+
+        async function handleAddTopicSave() {
+            if (app.isSyncing) {
+                console.log("Sync in progress, please wait...");
+                return;
+            }
+            
+            app.isSyncing = true;
+            
+            try {
+                const title = DOM.newTopicTitle.value.trim();
+                if (!title) {
+                    showNotification("Please enter a topic title.", "error");
+                    return;
+                }
+
+                const dateTime = DOM.newTopicDuration.value.trim();
+                const topics = getActiveTopics();
+                
+                const newTopic = {
+                    id: generateUUID(),
+                    subjectId: app.activeSubjectId,
+                    title: title,
+                    note: '',
+                    dateTime: dateTime,
+                    priority: app.selectedPriority,
+                    archived: false,
+                    order: (topics.length > 0 ? Math.max(...topics.map(t => t.order || 0)) : 0) + 1,
+                    updatedAt: new Date()
+                };
+                
+                await app.db.put('topics', newTopic);
+                app.topics.set(newTopic.id, newTopic);
+                
+                await syncToFirestore('topics', newTopic.id, newTopic);
+                
+                renderTopicsTable();
+                renderProgress();
+                toggleAddTopicModal(false);
+                
+                showNotification("Topic added successfully!", "success");
+                
+            } catch (error) {
+                console.error("Failed to add topic:", error);
+                showNotification("Failed to add topic. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+
+        // Edit Topic functionality with new modal
+        function handleOpenEditTopicModal(topicId) {
+            const topic = app.topics.get(topicId);
+            if (!topic) return;
+
+            DOM.editTopicId.value = topicId;
+            DOM.editTopicTitle.value = topic.title;
+            DOM.editTopicDuration.value = topic.dateTime || '';
+            app.editTopicPriority = topic.priority || 'medium';
+            updateEditPriorityButtons();
+            toggleEditTopicModal(true);
+        }
+
+        function updateEditPriorityButtons() {
+            document.querySelectorAll('.edit-priority-btn').forEach(btn => {
+                const isSelected = btn.dataset.priority === app.editTopicPriority;
+                btn.classList.toggle('bg-accent-light', isSelected);
+                btn.classList.toggle('text-accent', isSelected);
+                btn.classList.toggle('border-accent', isSelected);
+            });
+        }
+
+        async function handleEditTopicSave() {
+            if (app.isSyncing) return;
+            app.isSyncing = true;
+            
+            try {
+                const topicId = DOM.editTopicId.value;
+                const title = DOM.editTopicTitle.value.trim();
+                if (!title) {
+                    showNotification("Please enter a topic title.", "error");
+                    return;
+                }
+
+                const dateTime = DOM.editTopicDuration.value.trim();
+                const topic = app.topics.get(topicId);
+                if (!topic) return;
+
+                const updatedTopic = {
+                    ...topic,
+                    title: title,
+                    dateTime: dateTime,
+                    priority: app.editTopicPriority,
+                    updatedAt: new Date()
+                };
+                
+                await app.db.put('topics', updatedTopic);
+                app.topics.set(topicId, updatedTopic);
+                await syncToFirestore('topics', topicId, updatedTopic);
+                
+                renderTopicsTable();
+                toggleEditTopicModal(false);
+                
+                showNotification("Topic updated successfully!", "success");
+                
+            } catch (error) {
+                console.error("Failed to edit topic:", error);
+                showNotification("Failed to edit topic. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+
+        // Priority management
+        async function handleChangePriority(topicId) {
+            if (app.isSyncing) return;
+            app.isSyncing = true;
+            
+            try {
+                const topic = app.topics.get(topicId);
+                if (!topic) return;
+
+                const priorities = ['low', 'medium', 'high'];
+                const currentIndex = priorities.indexOf(topic.priority || 'medium');
+                const nextPriority = priorities[(currentIndex + 1) % priorities.length];
+
+                const updatedTopic = { 
+                    ...topic, 
+                    priority: nextPriority, 
+                    updatedAt: new Date() 
+                };
+                
+                await app.db.put('topics', updatedTopic);
+                app.topics.set(topicId, updatedTopic);
+                await syncToFirestore('topics', topicId, updatedTopic);
+                
+                renderTopicsTable();
+                
+                showNotification(`Priority set to ${nextPriority}`, "info");
+                
+            } catch (error) {
+                console.error("Failed to change priority:", error);
+                showNotification("Error changing priority. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+
+        // Archive topic with proper error handling
+        async function handleArchiveTopic(topicId) {
+            if (app.isSyncing) return;
+            app.isSyncing = true;
+            
+            try {
+                const topic = app.topics.get(topicId);
+                if (!topic) return;
+
+                const isArchiving = !topic.archived;
+                const updatedTopic = { ...topic, archived: isArchiving, updatedAt: new Date() };
+                
+                await app.db.put('topics', updatedTopic);
+                app.topics.set(topicId, updatedTopic);
+                
+                renderTopicsTable();
+                renderProgress();
+                
+                await syncToFirestore('topics', topicId, updatedTopic);
+                
+                showNotification(`Topic ${isArchiving ? 'archived' : 'unarchived'} successfully!`, "success");
+            } catch (error) {
+                console.error("Failed to archive topic:", error);
+                showNotification("Error archiving topic. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+
+        // Delete topic with proper error handling
+        async function handleDeleteTopic(topicId) {
+            if (app.isSyncing) return;
+            app.isSyncing = true;
+            
+            try {
+                if (!confirm("Are you sure you want to delete this topic? This will also delete all associated readings and targets.")) return;
+
+                const batch = app.firestoreDB.batch();
+                let indexedDBPromises = [];
+
+                // Delete associated readings
+                for (let i = 1; i <= 6; i++) {
+                    const readingId = `${topicId}_${i}`;
+                    if (app.readings.has(readingId)) {
+                        indexedDBPromises.push(app.db.delete('readings', readingId));
+                        app.readings.delete(readingId);
+                        const docRef = app.firestoreDB.collection('readings').doc(readingId);
+                        batch.delete(docRef);
+                    }
+                }
+
+                // Delete associated targets
+                const targetsToDelete = Array.from(app.targets.values())
+                    .filter(t => t.topicId === topicId);
+                
+                for (const target of targetsToDelete) {
+                    indexedDBPromises.push(app.db.delete('targets', target.id));
+                    app.targets.delete(target.id);
+                    const docRef = app.firestoreDB.collection('targets').doc(target.id);
+                    batch.delete(docRef);
+                }
+                
+                // Delete topic itself
+                indexedDBPromises.push(app.db.delete('topics', topicId));
+                app.topics.delete(topicId);
+                const topicDocRef = app.firestoreDB.collection('topics').doc(topicId);
+                batch.delete(topicDocRef);
+                
+                await Promise.all(indexedDBPromises);
+                try {
+                    await batch.commit();
+                } catch (error) {
+                    console.error("Error committing batch delete:", error);
+                }
+                
+                renderTopicsTable();
+                renderProgress();
+                renderTargets();
+                
+                showNotification("Topic deleted successfully!", "success");
+            } catch (error) {
+                console.error("Failed to delete topic:", error);
+                showNotification("Error deleting topic. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+        
+        function handleEditSource() {
+            DOM.sourceText.classList.add('hidden');
+            DOM.sourceInput.classList.remove('hidden');
+            DOM.sourceInput.focus();
+        }
+        
+        async function handleSaveSource() {
+            if (app.isSyncing) return;
+            app.isSyncing = true;
+            
+            try {
+                DOM.sourceText.classList.remove('hidden');
+                DOM.sourceInput.classList.add('hidden');
+                
+                const newSource = DOM.sourceInput.value;
+                const subject = app.subjects.get(app.activeSubjectId);
+                
+                if (subject && subject.source !== newSource) {
+                    const updatedSubject = { ...subject, source: newSource, updatedAt: new Date() };
+                    
+                    await app.db.put('subjects', updatedSubject);
+                    app.subjects.set(app.activeSubjectId, updatedSubject);
+                    
+                    renderSource();
+                    
+                    await syncToFirestore('subjects', app.activeSubjectId, updatedSubject);
+                    
+                    showNotification("Source updated successfully!", "success");
+                }
+            } catch (error) {
+                console.error("Failed to save source:", error);
+                showNotification("Error saving source. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+        
+        function handleOpenNoteModal(topicId) {
+            const topic = app.topics.get(topicId);
+            if (!topic) return;
+            
+            app.currentNoteTopicId = topicId;
+            DOM.noteModalTitle.textContent = `Note: ${topic.title}`;
+            DOM.noteModalTextarea.value = topic.note || '';
+            toggleNoteModal(true);
+        }
+        
+        async function handleSaveNote() {
+            if (app.isSyncing) return;
+            app.isSyncing = true;
+            
+            try {
+                const topicId = app.currentNoteTopicId;
+                if (!topicId) return;
+                
+                const topic = app.topics.get(topicId);
+                const newNote = DOM.noteModalTextarea.value;
+                
+                if (topic.note !== newNote) {
+                    const updatedTopic = { ...topic, note: newNote, updatedAt: new Date() };
+                    
+                    await app.db.put('topics', updatedTopic);
+                    app.topics.set(topicId, updatedTopic);
+                    
+                    const btn = DOM.topicsTableBody.querySelector(`.note-button[data-topic-id="${topicId}"]`);
+                    if (btn) {
+                        const hasNote = newNote.trim() !== '';
+                        btn.textContent = hasNote ? 'View' : 'Add';
+                        btn.classList.toggle('has-note', hasNote);
+                    }
+                    
+                    await syncToFirestore('topics', topicId, updatedTopic);
+                    
+                    showNotification("Note saved successfully!", "success");
+                }
+                toggleNoteModal(false);
+            } catch (error) {
+                console.error("Failed to save note:", error);
+                showNotification("Error saving note. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+
+        async function handleDeleteNote() {
+            if (app.isSyncing) return;
+            app.isSyncing = true;
+            
+            try {
+                const topicId = app.currentNoteTopicId;
+                if (!topicId) return;
+                
+                if (!confirm("Delete this note?")) return;
+                
+                const topic = app.topics.get(topicId);
+                const updatedTopic = { ...topic, note: '', updatedAt: new Date() };
+                
+                await app.db.put('topics', updatedTopic);
+                app.topics.set(topicId, updatedTopic);
+                
+                const btn = DOM.topicsTableBody.querySelector(`.note-button[data-topic-id="${topicId}"]`);
+                if (btn) {
+                    btn.textContent = 'Add';
+                    btn.classList.remove('has-note');
+                }
+                
+                await syncToFirestore('topics', topicId, updatedTopic);
+                toggleNoteModal(false);
+                
+                showNotification("Note deleted successfully!", "success");
+            } catch (error) {
+                console.error("Failed to delete note:", error);
+                showNotification("Error deleting note. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+
+        // Goal Card → Table Sync with proper error handling
+        async function handleToggleTarget(targetId) {
+            if (app.isSyncing) {
+                console.log("Sync in progress, skipping...");
+                return;
+            }
+            app.isSyncing = true;
+            
+            try {
+                const target = app.targets.get(targetId);
+                if (!target) {
+                    app.isSyncing = false;
+                    return;
+                }
+                
+                const updatedTarget = { ...target, completed: !target.completed, updatedAt: new Date() };
+
+                // State check
+                const localTarget = await app.db.get('targets', targetId);
+                if (localTarget && localTarget.completed === updatedTarget.completed) {
+                    app.isSyncing = false;
+                    console.log("Target status already set to desired state.");
+                    return;
+                }
+                
+                await app.db.put('targets', updatedTarget);
+                app.targets.set(targetId, updatedTarget);
+                
+                renderTargets();
+                
+                await syncToFirestore('targets', targetId, updatedTarget);
+                
+                // Goal Card → Table Sync
+                if (target.passIndex !== null && target.passIndex >= 1) {
+                    await handleToggleReadingStatus(target.topicId, target.passIndex, updatedTarget.completed);
+                }
+                
+            } catch (error) {
+                console.error("Failed to toggle target:", error);
+                showNotification("Error updating task. Please try again.", "error");
+            } finally {
+                // Ensure all UI components are updated
+                app.isSyncing = false;
+                renderTargets();
+                renderTopicsTable();
+                renderProgress();
+            }
+        }
+
+        // Delete target with proper error handling
+        async function handleDeleteTarget(targetId) {
+            if (app.isSyncing) return;
+            app.isSyncing = true;
+            
+            try {
+                if (!confirm("Are you sure you want to delete this task?")) return;
+                
+                const target = app.targets.get(targetId);
+                if (!target) return;
+                
+                await app.db.delete('targets', targetId);
+                app.targets.delete(targetId);
+                
+                await deleteFromFirestore('targets', targetId);
+                
+                // Clear allocatedDate if no other targets are linked
+                if (target.passIndex !== null && target.passIndex >= 1) {
+                    const readingId = `${target.topicId}_${target.passIndex}`;
+                    const reading = app.readings.get(readingId);
+                    
+                    const otherLinkedTargets = Array.from(app.targets.values())
+                        .filter(t => t.id !== targetId && 
+                                     t.topicId === target.topicId && 
+                                     t.passIndex === target.passIndex &&
+                                     t.date === target.date);
+                    
+                    if (reading && otherLinkedTargets.length === 0) {
+                        const updatedReading = { ...reading, allocatedDate: null, updatedAt: new Date() };
+                        await app.db.put('readings', updatedReading);
+                        app.readings.set(readingId, updatedReading);
+                        await syncToFirestore('readings', readingId, updatedReading);
+                    }
+                }
+                
+                renderTargets();
+                renderTopicsTable();
+                
+                showNotification("Task deleted successfully!", "success");
+            } catch (error) {
+                console.error("Failed to delete target:", error);
+                showNotification("Error deleting task. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+
+        // Task Modal functions
+        function handleOpenTaskModal(type, targetId = null) {
+            app.currentTaskModal.type = type;
+            app.currentTaskModal.targetId = targetId;
+            
+            // Reset modal
+            DOM.taskModalTargetId.value = targetId || '';
+            DOM.taskModalTargetType.value = type;
+            DOM.taskModalTopic.value = '';
+            DOM.taskModalPassIndex.value = '1';
+            DOM.taskModalDisplayName.value = '';
+            DOM.taskModalDate.value = type === 'daily' ? getISODateString(new Date()) : '';
+            DOM.taskModalStartTime.value = '';
+            DOM.taskModalEndTime.value = '';
+
+            // Populate topics dropdown
+            let topicOptions = '<option value="">Select Topic...</option>';
+            const activeTopics = getActiveTopics().filter(t => !t.archived);
+            activeTopics.forEach(topic => {
+                topicOptions += `<option value="${topic.id}">${topic.title}</option>`;
+            });
+            DOM.taskModalTopic.innerHTML = topicOptions;
+
+            if (targetId) {
+                // Edit mode
+                DOM.taskModalTitle.textContent = 'Edit Task';
+                const target = app.targets.get(targetId);
+                if (target) {
+                    DOM.taskModalTargetId.value = target.id;
+                    DOM.taskModalTopic.value = target.topicId || '';
+                    DOM.taskModalPassIndex.value = target.passIndex || '';
+                    DOM.taskModalDisplayName.value = target.displayName || '';
+                    DOM.taskModalDate.value = target.date || '';
+                    DOM.taskModalStartTime.value = target.startTime || '';
+                    DOM.taskModalEndTime.value = target.endTime || '';
+                }
+            } else {
+                // Add mode
+                DOM.taskModalTitle.textContent = type === 'daily' ? 'New Daily Task' : 'New Weekly Task';
+            }
+            
+            updateAutoTaskName();
+            toggleTaskModal(true);
+        }
+        
+        function updateAutoTaskName() {
+            const topicId = DOM.taskModalTopic.value;
+            const passIndexStr = DOM.taskModalPassIndex.value;
+            
+            const topic = app.topics.get(topicId);
+            const passOption = DOM.taskModalPassIndex.querySelector(`option[value="${passIndexStr}"]`);
+            const passName = passOption ? passOption.textContent.split(' (')[0] : 'Custom';
+            
+            const autoName = (topic ? topic.title : 'Custom') + ' - ' + passName;
+            DOM.taskModalAutoName.textContent = `Auto: ${autoName}`;
+        }
+
+        async function handleSaveTask() {
+            if (app.isSyncing) return;
+            app.isSyncing = true;
+            
+            try {
+                const targetId = DOM.taskModalTargetId.value || generateUUID();
+                const type = DOM.taskModalTargetType.value;
+                const topicId = DOM.taskModalTopic.value;
+                const passIndexStr = DOM.taskModalPassIndex.value;
+                const passIndex = passIndexStr ? parseInt(passIndexStr) : null;
+                
+                if (!topicId && !DOM.taskModalDisplayName.value.trim()) {
+                    showNotification("Please either select a topic or provide a custom name.", "error");
+                    return;
+                }
+
+                const topic = app.topics.get(topicId);
+                const passOption = DOM.taskModalPassIndex.querySelector(`option[value="${passIndexStr}"]`);
+                const passName = passOption ? passOption.textContent.split(' (')[0] : 'Custom';
+                
+                const taskName = topic ? `${topic.title} - ${passName}` : passName;
+                const displayName = DOM.taskModalDisplayName.value.trim() || null;
+
+                // Get existing target to preserve completed status
+                const existingTarget = app.targets.get(targetId);
+
+                const targetData = {
+                    id: targetId,
+                    type: type,
+                    topicId: topicId || null,
+                    passIndex: passIndex,
+                    taskName: taskName,
+                    displayName: displayName,
+                    date: DOM.taskModalDate.value,
+                    startTime: DOM.taskModalStartTime.value || null,
+                    endTime: DOM.taskModalEndTime.value || null,
+                    durationMinutes: null,
+                    order: 0,
+                    completed: existingTarget ? existingTarget.completed : false, // Preserve status
+                    updatedAt: new Date()
+                };
+
+                // Sync allocatedDate
+                if (passIndex !== null && targetData.date) {
+                    const readingId = `${topicId}_${passIndex}`;
+                    let reading = app.readings.get(readingId);
+                    
+                    if (!reading) {
+                        reading = {
+                            id: readingId,
+                            topicId: topicId,
+                            passIndex: passIndex,
+                            complete: false,
+                            updatedAt: new Date(),
+                            allocatedDate: targetData.date
+                        };
+                    } else {
+                        reading.allocatedDate = targetData.date;
+                        reading.updatedAt = new Date();
+                    }
+                    
+                    await app.db.put('readings', reading);
+                    app.readings.set(readingId, reading);
+                    await syncToFirestore('readings', readingId, reading);
+                }
+                
+                await app.db.put('targets', targetData);
+                app.targets.set(targetId, targetData);
+                await syncToFirestore('targets', targetId, targetData);
+                
+                renderTargets();
+                renderTopicsTable();
+                toggleTaskModal(false);
+                
+                showNotification("Task saved successfully!", "success");
+                
+            } catch (error) {
+                console.error("Failed to save task:", error);
+                showNotification("Failed to save task. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+
+        // Firebase sync functions
+        async function syncToFirestore(collectionName, docId, data) {
+            if (!app.firestoreDB) return;
+            try {
+                await app.firestoreDB.collection(collectionName).doc(docId).set(data);
+            } catch (error) {
+                console.error("Firestore Sync Error:", error);
+                document.getElementById('sync-status-text').textContent = "Sync failed. Retrying...";
+            }
+        }
+        
+        async function deleteFromFirestore(collectionName, docId) {
+            if (!app.firestoreDB) return;
+            try {
+                await app.firestoreDB.collection(collectionName).doc(docId).delete();
+            } catch (error) {
+                console.error("Firestore Delete Error:", error);
+                document.getElementById('sync-status-text').textContent = "Sync failed. Retrying...";
+            }
+        }
+
+        function initFirestoreSync() {
+            if (!app.firestoreDB) {
+                console.log("Firestore not available, running in offline mode");
+                document.getElementById('sync-status-text').textContent = "Offline mode";
+                return;
+            }
+            
+            const collectionsToSync = ['subjects', 'topics', 'readings', 'targets'];
+            
+            app.listeners.forEach(unsubscribe => unsubscribe());
+            app.listeners = [];
+
+            console.log("Initializing Firestore real-time listeners...");
+            document.getElementById('sync-status-text').textContent = "Syncing...";
+            
+            collectionsToSync.forEach(collectionName => {
+                const collectionRef = app.firestoreDB.collection(collectionName);
+                
+                const unsubscribe = collectionRef.onSnapshot(async (querySnapshot) => {
+                    if (app.isSyncing) return;
+                    
+                    console.log(`Received snapshot for: ${collectionName}`);
+                    let needsRender = false;
+                    
+                    // Use IndexedDB transaction
+                    for (const change of querySnapshot.docChanges()) {
+                        const remoteData = change.doc.data();
+                        const docId = change.doc.id;
+                        
+                        if (remoteData.updatedAt && remoteData.updatedAt.toDate) {
+                            remoteData.updatedAt = remoteData.updatedAt.toDate();
+                        }
+                        remoteData.id = docId;
+                        
+                        const localData = await app.db.get(collectionName, docId);
+                        
+                        if (!localData || !localData.updatedAt || remoteData.updatedAt.getTime() > localData.updatedAt.getTime()) {
+                            if (change.type === 'added' || change.type === 'modified') {
+                                console.log(`Syncing remote ${collectionName}/${docId} -> local`);
+                                await app.db.put(collectionName, remoteData);
+                                needsRender = true;
+                            } else if (change.type === 'removed') {
+                                console.log(`Syncing remote delete ${collectionName}/${docId} -> local`);
+                                await app.db.delete(collectionName, docId);
+                                needsRender = true;
+                            }
+                        }
+                    }
+
+                    if (needsRender) {
+                        console.log("Data changed, reloading state and re-rendering...");
+                        await loadDataFromIndexedDB();
+                        renderAll();
+                    }
+                    document.getElementById('sync-status-text').textContent = "Real-time sync active.";
+                    
+                }, (error) => {
+                    console.error(`Firestore listener error for ${collectionName}:`, error);
+                    document.getElementById('sync-status-text').textContent = "Sync disconnected. Retrying...";
+                });
+                
+                app.listeners.push(unsubscribe);
+            });
+        }
+
+        // UI Helper functions
+        function showLoading(isLoading) {
+            app.isLoading = isLoading;
+            if (DOM.loadingOverlay) {
+                DOM.loadingOverlay.classList.toggle('hidden', !isLoading);
+            }
+        }
+
+        function toggleSettingsModal(show) {
+            DOM.settingsModal.classList.toggle('hidden', !show);
+        }
+
+        function toggleNoteModal(show) {
+            if (!show) app.currentNoteTopicId = null;
+            DOM.noteModal.classList.toggle('hidden', !show);
+        }
+
+        function toggleTaskModal(show) {
+            if (!show) app.currentTaskModal = { targetId: null, type: 'daily' };
+            DOM.taskModal.classList.toggle('hidden', !show);
+        }
+
+        function toggleAddTopicModal(show) {
+            DOM.addTopicModal.classList.toggle('hidden', !show);
+            if (show) {
+                DOM.newTopicTitle.focus();
+            }
+        }
+
+        function toggleEditTopicModal(show) {
+            DOM.editTopicModal.classList.toggle('hidden', !show);
+            if (show) {
+                DOM.editTopicTitle.focus();
+            }
+        }
+
+        function setTheme(themeName) {
+            if (themeName === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            localStorage.setItem('gke-theme', themeName);
+            
+            // Update theme button states
+            const lightBtn = document.getElementById('theme-light-btn');
+            const darkBtn = document.getElementById('theme-dark-btn');
+            if (lightBtn && darkBtn) {
+                lightBtn.classList.toggle('bg-accent-light', themeName === 'light');
+                darkBtn.classList.toggle('bg-accent-light', themeName === 'dark');
+            }
+        }
+        
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Formatting helpers
+        function formatDateTime(date) {
+            if (!date) return '';
+            return date;
+        }
+
+        function formatDateSimple(dateStr) {
+            try {
+                const date = new Date(dateStr + 'T00:00:00');
+                const day = date.getDate();
+                const month = date.toLocaleString('default', { month: 'short' });
+                return `${day} ${month}`;
+            } catch (e) {
+                return dateStr;
+            }
+        }
+        
+        function getISODateString(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function isDateInCurrentWeek(dateStr) {
+            if (!dateStr) return false;
+            
+            const date = new Date(dateStr + 'T00:00:00');
+            const today = new Date();
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay());
+            const endOfWeek = new Date(today);
+            endOfWeek.setDate(today.getDate() + (6 - today.getDay()));
+            
+            return date >= startOfWeek && date <= endOfWeek;
+        }
+
+        // Analytics functions
+        function renderHistoryTab() {
+            const historyList = document.getElementById('history-list');
+            if (!historyList) return;
+
+            const completedTargets = Array.from(app.targets.values())
+                .filter(t => t.completed)
+                .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+            let html = '<div class="space-y-6">';
+            
+            // Completion Stats
+            const today = new Date().toISOString().split('T')[0];
+            const todayCompleted = completedTargets.filter(t => t.date === today).length;
+            const weekCompleted = completedTargets.filter(t => isDateInCurrentWeek(t.date)).length;
+            const lastWeekCompleted = completedTargets.filter(t => isDateInLastWeek(t.date)).length;
+            
+            html += `
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="bg-card p-4 rounded-lg text-center border border-custom">
+                        <div class="text-2xl font-bold text-accent">${todayCompleted}</div>
+                        <div class="text-sm text-secondary">Today</div>
+                    </div>
+                    <div class="bg-card p-4 rounded-lg text-center border border-custom">
+                        <div class="text-2xl font-bold text-accent">${weekCompleted}</div>
+                        <div class="text-sm text-secondary">This Week</div>
+                    </div>
+                    <div class="bg-card p-4 rounded-lg text-center border border-custom">
+                        <div class="text-2xl font-bold text-accent">${lastWeekCompleted}</div>
+                        <div class="text-sm text-secondary">Last Week</div>
+                    </div>
+                </div>
+            `;
+
+            // Weekly Comparison Chart
+            html += `
+                <div class="bg-card p-4 rounded-lg border border-custom">
+                    <h3 class="font-semibold text-lg mb-4">Weekly Progress Comparison</h3>
+                    <div class="chart-container">
+                        <canvas id="weeklyChart"></canvas>
+                    </div>
+                </div>
+            `;
+
+            // Subject Breakdown Chart
+            html += `
+                <div class="bg-card p-4 rounded-lg border border-custom">
+                    <h3 class="font-semibold text-lg mb-4">Subject Breakdown</h3>
+                    <div class="chart-container">
+                        <canvas id="subjectChart"></canvas>
+                    </div>
+                </div>
+            `;
+
+            // Recent Activity
+            html += '<div class="bg-card p-4 rounded-lg border border-custom">';
+            html += '<h3 class="font-semibold text-lg mb-4">Recent Activity</h3>';
+            if (completedTargets.length === 0) {
+                html += '<p class="text-secondary text-sm p-2">No recent activity.</p>';
+            } else {
+                completedTargets.slice(0, 10).forEach(target => {
+                    const topic = app.topics.get(target.topicId);
+                    const taskDisplay = target.displayName || target.taskName;
+                    html += `
+                        <div class="flex items-center justify-between p-3 border-b border-custom last:border-b-0">
+                            <span class="text-sm font-medium">${taskDisplay}</span>
+                            <span class="text-xs text-secondary">${formatDateSimple(target.date)}</span>
+                        </div>
+                    `;
+                });
+            }
+            html += '</div>';
+            
+            html += '</div>';
+            historyList.innerHTML = html;
+
+            // Initialize charts
+            renderWeeklyChart();
+            renderSubjectChart();
+        }
+
+        function renderWeeklyChart() {
+            const ctx = document.getElementById('weeklyChart')?.getContext('2d');
+            if (!ctx) return;
+
+            const last4Weeks = getLast4Weeks();
+            const weeklyData = last4Weeks.map(week => {
+                return Array.from(app.targets.values()).filter(t => 
+                    t.completed && isDateInWeek(t.date, week)
+                ).length;
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: last4Weeks.map((_, i) => `Week ${i + 1}`),
+                    datasets: [{
+                        label: 'Tasks Completed',
+                        data: weeklyData,
+                        backgroundColor: 'rgba(0, 122, 255, 0.6)',
+                        borderColor: 'rgba(0, 122, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderSubjectChart() {
+            const ctx = document.getElementById('subjectChart')?.getContext('2d');
+            if (!ctx) return;
+
+            const subjectData = {};
+            app.targets.forEach(target => {
+                if (target.completed) {
+                    const subjectId = app.topics.get(target.topicId)?.subjectId;
+                    if (subjectId) {
+                        subjectData[subjectId] = (subjectData[subjectId] || 0) + 1;
+                    }
+                }
+            });
+
+            const subjects = Array.from(app.subjects.values());
+            const data = subjects.map(subject => subjectData[subject.id] || 0);
+            const labels = subjects.map(subject => subject.name);
+            const colors = ['#34C759', '#007AFF', '#FF9500', '#AF52DE', '#FF3B30', '#5856D6'];
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, subjects.length),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        function getLast4Weeks() {
+            const weeks = [];
+            for (let i = 3; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i * 7);
+                weeks.push(getWeekRange(date));
+            }
+            return weeks;
+        }
+
+        function getWeekRange(date) {
+            const start = new Date(date);
+            start.setDate(date.getDate() - date.getDay());
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            return { start, end };
+        }
+
+        function isDateInWeek(dateStr, week) {
+            if (!dateStr) return false;
+            const date = new Date(dateStr + 'T00:00:00');
+            return date >= week.start && date <= week.end;
+        }
+
+        function isDateInLastWeek(dateStr) {
+            if (!dateStr) return false;
+            const date = new Date(dateStr + 'T00:00:00');
+            const lastWeekStart = new Date();
+            lastWeekStart.setDate(lastWeekStart.getDate() - 13); // 2 weeks ago
+            lastWeekStart.setDate(lastWeekStart.getDate() - lastWeekStart.getDay());
+            const lastWeekEnd = new Date(lastWeekStart);
+            lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+            return date >= lastWeekStart && date <= lastWeekEnd;
+        }
+
+        // Start the application when DOM is loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', main);
+        } else {
+            main();
+        }
+
+    </script>
+</body>
+</html>
