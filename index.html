@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1200, initial-scale=1.0">
-    <title>GkE Study Tracker (v11.6)</title>
+    <title>GkE Study Tracker (v11.4)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -31,8 +31,6 @@
             --priority-high: #FF3B30;
             --priority-medium: #FF9500;
             --priority-low: #34C759;
-            --sync-color: #4CAF50;
-            --sync-color-hover: #45a049;
         }
         
         .dark {
@@ -53,8 +51,6 @@
             --priority-high: #FF453A;
             --priority-medium: #FF9F0A;
             --priority-low: #30D158;
-            --sync-color: #30D158;
-            --sync-color-hover: #34C759;
         }
 
         body {
@@ -298,149 +294,10 @@
         .drag-handle:hover {
             opacity: 1;
         }
-
-        /* Force Sync Button */
-        .force-sync-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: var(--sync-color);
-            color: white;
-            border: none;
-            padding: 12px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: all 0.3s ease;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .force-sync-btn:hover {
-            background-color: var(--sync-color-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-        }
-        
-        .force-sync-btn:disabled {
-            background-color: var(--text-secondary);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        .force-sync-btn.syncing {
-            background-color: var(--accent-color);
-            animation: pulse 1.5s infinite;
-        }
-        
-        .sync-status {
-            margin-top: 10px;
-            padding: 8px;
-            border-radius: 4px;
-            display: none;
-        }
-        
-        .sync-status.active {
-            display: block;
-            background-color: var(--accent-color-light);
-            color: var(--accent-color);
-        }
-        
-        .sync-status.success {
-            display: block;
-            background-color: var(--dot-color-1);
-            color: white;
-        }
-        
-        .sync-status.error {
-            display: block;
-            background-color: var(--priority-high);
-            color: white;
-        }
-        
-        /* Database Recovery Modal */
-        .recovery-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        
-        .recovery-content {
-            background-color: var(--bg-card);
-            padding: 2rem;
-            border-radius: 12px;
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-        }
-        
-        .recovery-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-top: 1.5rem;
-        }
-        
-        .recovery-btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        
-        .recovery-btn.primary {
-            background-color: var(--accent-color);
-            color: white;
-        }
-        
-        .recovery-btn.secondary {
-            background-color: var(--border-color);
-            color: var(--text-primary);
-        }
-        
-        .recovery-btn:hover {
-            transform: translateY(-2px);
-        }
     </style>
 </head>
 
 <body class="antialiased">
-
-    <!-- Database Recovery Modal -->
-    <div id="recovery-modal" class="recovery-modal hidden">
-        <div class="recovery-content">
-            <h2 class="text-xl font-bold mb-4">Database Recovery Required</h2>
-            <p class="text-secondary mb-2">There's an issue with your local database.</p>
-            <p class="text-secondary mb-4">Current version: <span id="current-version" class="font-semibold">Unknown</span></p>
-            <div class="recovery-buttons">
-                <button id="recovery-reset" class="recovery-btn primary">Reset Database</button>
-                <button id="recovery-continue" class="recovery-btn secondary">Continue Anyway</button>
-            </div>
-            <p class="text-xs text-secondary mt-4">Note: Resetting will clear all local data but will restore from Firebase if available.</p>
-        </div>
-    </div>
-
-    <!-- Force Sync Button -->
-    <button id="forceSyncBtn" class="force-sync-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-        </svg>
-        Force Sync to Firebase
-    </button>
 
     <!-- Notification System -->
     <div id="notification" class="notification hidden">
@@ -464,7 +321,7 @@
     <div class="max-w-6xl mx-auto p-4 space-y-4">
 
         <header class="flex justify-between items-center gap-4">
-            <h1 class="text-3xl font-bold text-accent">GkE Study Tracker v11.6</h1>
+            <h1 class="text-3xl font-bold text-accent">GkE Study Tracker v11.4</h1>
             
             <!-- Global Search -->
             <div class="flex-1 max-w-md">
@@ -624,11 +481,6 @@
             <div>
                 <label class="block text-sm font-medium text-secondary">Sync Status</label>
                 <p id="sync-status-text" class="mt-1 p-2 bg-accent-light rounded text-sm">Initializing...</p>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-secondary">Database Version</label>
-                <p id="db-version-text" class="mt-1 p-2 bg-accent-light rounded text-sm">Checking...</p>
             </div>
 
             <button id="settings-done-btn" class="w-full p-2 bg-accent text-white rounded font-semibold">Done</button>
@@ -880,280 +732,210 @@
 
             notification: document.getElementById('notification'),
             notificationMessage: document.getElementById('notification-message'),
-            notificationClose: document.getElementById('notification-close'),
-            
-            forceSyncBtn: document.getElementById('forceSyncBtn'),
-            syncStatusText: document.getElementById('sync-status-text'),
-            dbVersionText: document.getElementById('db-version-text'),
-            
-            recoveryModal: document.getElementById('recovery-modal'),
-            currentVersion: document.getElementById('current-version'),
-            recoveryReset: document.getElementById('recovery-reset'),
-            recoveryContinue: document.getElementById('recovery-continue')
+            notificationClose: document.getElementById('notification-close')
         };
 
-        // Enhanced IndexedDB Manager with dynamic version handling
+        // IndexedDB Manager
         class IndexedDBManager {
             constructor() {
                 this.dbName = 'GkETrackerDB';
-                this.storeNames = ['subjects', 'topics', 'readings', 'targets'];
                 this.db = null;
-                this.currentVersion = null;
             }
 
             async open() {
                 return new Promise((resolve, reject) => {
-                    // First, check the current database version without opening
+                    // First, check the current version
                     const checkRequest = indexedDB.open(this.dbName);
-                    
                     checkRequest.onsuccess = (event) => {
                         const db = event.target.result;
-                        this.currentVersion = db.version;
-                        console.log(`Current database version: ${this.currentVersion}`);
-                        DOM.currentVersion.textContent = this.currentVersion;
-                        DOM.dbVersionText.textContent = `DB Version: ${this.currentVersion}`;
+                        const currentVersion = db.version;
                         db.close();
                         
-                        // Now open with the current version to avoid version conflicts
-                        const openRequest = indexedDB.open(this.dbName, this.currentVersion);
+                        // Open with current version to avoid version conflicts
+                        const request = indexedDB.open(this.dbName, currentVersion);
                         
-                        openRequest.onerror = () => {
-                            console.error("IndexedDB open error:", openRequest.error);
-                            reject(openRequest.error);
-                        };
-                        
-                        openRequest.onsuccess = () => {
-                            this.db = openRequest.result;
-                            console.log(`IndexedDB opened successfully with version ${this.db.version}`);
+                        request.onerror = () => reject(request.error);
+                        request.onsuccess = () => {
+                            this.db = request.result;
                             resolve(this.db);
                         };
                         
-                        openRequest.onupgradeneeded = (event) => {
-                            console.log(`Database upgrade needed. Old: ${event.oldVersion}, New: ${event.newVersion}`);
+                        request.onupgradeneeded = (event) => {
                             const db = event.target.result;
-                            this.createStores(db);
+                            this.createStores(db, event.oldVersion);
                         };
                     };
                     
                     checkRequest.onerror = () => {
-                        console.error("Failed to check database version:", checkRequest.error);
-                        // If we can't check the version, try to open with version 1
-                        this.openWithFallback().then(resolve).catch(reject);
-                    };
-                });
-            }
-
-            async openWithFallback() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open(this.dbName, 1);
-                    
-                    request.onerror = () => reject(request.error);
-                    request.onsuccess = () => {
-                        this.db = request.result;
-                        this.currentVersion = this.db.version;
-                        console.log(`Opened with fallback version: ${this.currentVersion}`);
-                        resolve(this.db);
-                    };
-                    request.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-                        this.createStores(db);
-                    };
-                });
-            }
-
-            createStores(db) {
-                console.log("Creating/verifying object stores...");
-                
-                // Create all object stores if they don't exist
-                this.storeNames.forEach(storeName => {
-                    if (!db.objectStoreNames.contains(storeName)) {
-                        console.log(`Creating object store: ${storeName}`);
-                        const store = db.createObjectStore(storeName, { keyPath: 'id' });
+                        // If database doesn't exist, create with version 1
+                        const request = indexedDB.open(this.dbName, 1);
                         
-                        // Create indexes for each store
-                        switch(storeName) {
-                            case 'subjects':
-                                store.createIndex('updatedAt', 'updatedAt');
-                                break;
-                            case 'topics':
-                                store.createIndex('subjectId', 'subjectId');
-                                store.createIndex('updatedAt', 'updatedAt');
-                                break;
-                            case 'readings':
-                                store.createIndex('topicId', 'topicId');
-                                store.createIndex('updatedAt', 'updatedAt');
-                                break;
-                            case 'targets':
-                                store.createIndex('type', 'type');
-                                store.createIndex('date', 'date');
-                                store.createIndex('updatedAt', 'updatedAt');
-                                break;
-                        }
-                    } else {
-                        console.log(`Object store ${storeName} already exists`);
-                    }
+                        request.onerror = () => reject(request.error);
+                        request.onsuccess = () => {
+                            this.db = request.result;
+                            resolve(this.db);
+                        };
+                        
+                        request.onupgradeneeded = (event) => {
+                            const db = event.target.result;
+                            this.createStores(db, 0);
+                        };
+                    };
                 });
+            }
+
+            createStores(db, oldVersion) {
+                // Create object stores if they don't exist
+                if (!db.objectStoreNames.contains('subjects')) {
+                    const subjectsStore = db.createObjectStore('subjects', { keyPath: 'id' });
+                    subjectsStore.createIndex('updatedAt', 'updatedAt');
+                }
+                
+                if (!db.objectStoreNames.contains('topics')) {
+                    const topicsStore = db.createObjectStore('topics', { keyPath: 'id' });
+                    topicsStore.createIndex('subjectId', 'subjectId');
+                    topicsStore.createIndex('updatedAt', 'updatedAt');
+                }
+                
+                if (!db.objectStoreNames.contains('readings')) {
+                    const readingsStore = db.createObjectStore('readings', { keyPath: 'id' });
+                    readingsStore.createIndex('topicId', 'topicId');
+                    readingsStore.createIndex('updatedAt', 'updatedAt');
+                }
+                
+                if (!db.objectStoreNames.contains('targets')) {
+                    const targetsStore = db.createObjectStore('targets', { keyPath: 'id' });
+                    targetsStore.createIndex('type', 'type');
+                    targetsStore.createIndex('date', 'date');
+                    targetsStore.createIndex('updatedAt', 'updatedAt');
+                }
+
+                // Handle data migrations for existing stores
+                if (oldVersion > 0 && oldVersion < 7) {
+                    this.migrateData(db, oldVersion);
+                }
+            }
+
+            migrateData(db, oldVersion) {
+                const transaction = db.transaction(['topics', 'targets', 'readings'], 'readwrite');
+                
+                // Add priority field to topics (v7 migration)
+                if (oldVersion < 7) {
+                    const topicsStore = transaction.objectStore('topics');
+                    const topicsRequest = topicsStore.openCursor();
+                    
+                    topicsRequest.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            const topic = cursor.value;
+                            if (typeof topic.priority === 'undefined') {
+                                topic.priority = 'medium';
+                                cursor.update(topic);
+                            }
+                            cursor.continue();
+                        }
+                    };
+                }
+                
+                // Add displayName and passIndex fields to targets (v7 migration)
+                if (oldVersion < 7) {
+                    const targetsStore = transaction.objectStore('targets');
+                    const targetsRequest = targetsStore.openCursor();
+                    
+                    targetsRequest.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            const target = cursor.value;
+                            if (typeof target.displayName === 'undefined') {
+                                target.displayName = null;
+                            }
+                            if (typeof target.passIndex === 'undefined') {
+                                target.passIndex = null;
+                            }
+                            cursor.update(target);
+                        }
+                    };
+                }
+                
+                // Add allocatedDate field to readings (v7 migration)
+                if (oldVersion < 7) {
+                    const readingsStore = transaction.objectStore('readings');
+                    const readingsRequest = readingsStore.openCursor();
+                    
+                    readingsRequest.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            const reading = cursor.value;
+                            if (typeof reading.allocatedDate === 'undefined') {
+                                reading.allocatedDate = null;
+                            }
+                            cursor.update(reading);
+                        }
+                    };
+                }
             }
 
             async getAll(storeName) {
-                if (!this.db) {
-                    await this.open();
-                }
-                
                 return new Promise((resolve, reject) => {
-                    try {
-                        const transaction = this.db.transaction([storeName], 'readonly');
-                        const store = transaction.objectStore(storeName);
-                        const request = store.getAll();
-                        
-                        request.onerror = () => {
-                            console.error(`Error getting all from ${storeName}:`, request.error);
-                            reject(request.error);
-                        };
-                        request.onsuccess = () => resolve(request.result);
-                    } catch (error) {
-                        console.error(`Transaction error for ${storeName}:`, error);
-                        reject(error);
-                    }
+                    const transaction = this.db.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.getAll();
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
                 });
             }
 
             async put(storeName, data) {
-                if (!this.db) {
-                    await this.open();
-                }
-                
                 return new Promise((resolve, reject) => {
-                    try {
-                        const transaction = this.db.transaction([storeName], 'readwrite');
-                        const store = transaction.objectStore(storeName);
-                        const request = store.put(data);
-                        
-                        request.onerror = () => {
-                            console.error(`Error putting to ${storeName}:`, request.error);
-                            reject(request.error);
-                        };
-                        request.onsuccess = () => resolve(request.result);
-                    } catch (error) {
-                        console.error(`Transaction error for ${storeName}:`, error);
-                        reject(error);
-                    }
+                    const transaction = this.db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.put(data);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
                 });
             }
 
             async get(storeName, key) {
-                if (!this.db) {
-                    await this.open();
-                }
-                
                 return new Promise((resolve, reject) => {
-                    try {
-                        const transaction = this.db.transaction([storeName], 'readonly');
-                        const store = transaction.objectStore(storeName);
-                        const request = store.get(key);
-                        
-                        request.onerror = () => {
-                            console.error(`Error getting from ${storeName}:`, request.error);
-                            reject(request.error);
-                        };
-                        request.onsuccess = () => resolve(request.result);
-                    } catch (error) {
-                        console.error(`Transaction error for ${storeName}:`, error);
-                        reject(error);
-                    }
+                    const transaction = this.db.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.get(key);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
                 });
             }
 
             async delete(storeName, key) {
-                if (!this.db) {
-                    await this.open();
-                }
-                
                 return new Promise((resolve, reject) => {
-                    try {
-                        const transaction = this.db.transaction([storeName], 'readwrite');
-                        const store = transaction.objectStore(storeName);
-                        const request = store.delete(key);
-                        
-                        request.onerror = () => {
-                            console.error(`Error deleting from ${storeName}:`, request.error);
-                            reject(request.error);
-                        };
-                        request.onsuccess = () => resolve(request.result);
-                    } catch (error) {
-                        console.error(`Transaction error for ${storeName}:`, error);
-                        reject(error);
-                    }
+                    const transaction = this.db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.delete(key);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
                 });
             }
 
             async clear(storeName) {
-                if (!this.db) {
-                    await this.open();
-                }
-                
                 return new Promise((resolve, reject) => {
-                    try {
-                        const transaction = this.db.transaction([storeName], 'readwrite');
-                        const store = transaction.objectStore(storeName);
-                        const request = store.clear();
-                        
-                        request.onerror = () => {
-                            console.error(`Error clearing ${storeName}:`, request.error);
-                            reject(request.error);
-                        };
-                        request.onsuccess = () => resolve(request.result);
-                    } catch (error) {
-                        console.error(`Transaction error for ${storeName}:`, error);
-                        reject(error);
-                    }
-                });
-            }
-
-            async resetDatabase() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.deleteDatabase(this.dbName);
+                    const transaction = this.db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.clear();
                     
                     request.onerror = () => reject(request.error);
-                    request.onsuccess = () => {
-                        console.log("Database reset successfully");
-                        this.db = null;
-                        this.currentVersion = null;
-                        resolve();
-                    };
-                    request.onblocked = () => {
-                        console.warn("Database deletion blocked - closing connections");
-                        resolve();
-                    };
+                    request.onsuccess = () => resolve(request.result);
                 });
             }
+        }
 
-            async checkDatabaseHealth() {
-                try {
-                    if (!this.db) {
-                        await this.open();
-                    }
-                    
-                    // Test each store by trying to count records
-                    const healthChecks = this.storeNames.map(async (storeName) => {
-                        try {
-                            const count = await this.getAll(storeName);
-                            return { storeName, healthy: true, count: count.length };
-                        } catch (error) {
-                            return { storeName, healthy: false, error: error.message };
-                        }
-                    });
-                    
-                    const results = await Promise.all(healthChecks);
-                    const allHealthy = results.every(result => result.healthy);
-                    
-                    console.log("Database health check:", results);
-                    return { healthy: allHealthy, results };
-                } catch (error) {
-                    console.error("Database health check failed:", error);
-                    return { healthy: false, error: error.message };
-                }
-            }
+        // Initialize IndexedDB
+        async function initIndexedDB() {
+            app.db = new IndexedDBManager();
+            await app.db.open();
+            console.log("IndexedDB initialized successfully");
         }
 
         // Format duration helper function
@@ -1243,49 +1025,15 @@
             }, 300);
         }
 
-        // Database recovery system
-        function showRecoveryModal() {
-            DOM.recoveryModal.classList.remove('hidden');
-        }
-
-        function hideRecoveryModal() {
-            DOM.recoveryModal.classList.add('hidden');
-        }
-
-        async function handleDatabaseRecovery() {
-            showLoading(true);
-            try {
-                showNotification("Resetting database...", "info");
-                await app.db.resetDatabase();
-                showNotification("Database reset successfully! Refreshing...", "success");
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } catch (error) {
-                console.error("Database recovery failed:", error);
-                showNotification("Recovery failed. Please clear browser data manually.", "error");
-                showLoading(false);
-            }
-        }
-
         // Main initialization function
         async function main() {
-            console.log("Starting GkE Study Tracker v11.6...");
+            console.log("Starting GkE Study Tracker v11.4...");
             showLoading(true);
             
             try {
                 initTheme();
                 initFirebase();
                 await initIndexedDB();
-                
-                // Check database health
-                const health = await app.db.checkDatabaseHealth();
-                if (!health.healthy) {
-                    console.warn("Database health issues detected:", health);
-                    showRecoveryModal();
-                    return;
-                }
-                
                 await loadDataFromIndexedDB();
                 await ensureDefaultSubjects();
                 initFirestoreSync();
@@ -1299,12 +1047,7 @@
             } catch (error) {
                 console.error("Failed to initialize app:", error);
                 showLoading(false);
-                
-                if (error.name === "VersionError") {
-                    showRecoveryModal();
-                } else {
-                    showNotification("Failed to load application. Please refresh the page.", "error");
-                }
+                showNotification("Failed to load application. Please refresh the page.", "error");
             }
         }
 
@@ -1313,22 +1056,15 @@
                 const firebaseApp = firebase.initializeApp(firebaseConfig);
                 app.firestoreDB = firebase.firestore();
                 console.log("Firebase initialized successfully");
-                DOM.syncStatusText.textContent = "Firebase connected";
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
-                DOM.syncStatusText.textContent = "Firebase connection failed";
+                document.getElementById('sync-status-text').textContent = "Firebase connection failed";
             }
         }
 
         function initTheme() {
             const savedTheme = localStorage.getItem('gke-theme') || 'light';
             setTheme(savedTheme);
-        }
-
-        async function initIndexedDB() {
-            app.db = new IndexedDBManager();
-            await app.db.open();
-            console.log("IndexedDB initialized successfully");
         }
 
         async function loadDataFromIndexedDB() {
@@ -1644,27 +1380,125 @@
             return html;
         }
 
-        function registerEventListeners() {
-            // Database Recovery
-            DOM.recoveryReset.addEventListener('click', handleDatabaseRecovery);
-            DOM.recoveryContinue.addEventListener('click', () => {
-                hideRecoveryModal();
-                showNotification("Continuing with current database. Some features may not work properly.", "warning");
-                // Try to continue loading the app
-                setTimeout(() => {
-                    loadDataFromIndexedDB().then(() => {
-                        renderAll();
-                        showLoading(false);
-                    }).catch(error => {
-                        console.error("Failed to load data after continuing:", error);
-                        showNotification("Failed to load data. Please refresh the page.", "error");
-                    });
-                }, 500);
+        // Drag and drop functionality for task reordering
+        function initDragAndDrop() {
+            const dailyList = document.getElementById('daily-targets-list');
+            const weeklyList = document.getElementById('weekly-targets-list');
+            
+            [dailyList, weeklyList].forEach(list => {
+                if (!list) return;
+                
+                list.addEventListener('dragstart', handleDragStart);
+                list.addEventListener('dragover', handleDragOver);
+                list.addEventListener('dragenter', handleDragEnter);
+                list.addEventListener('dragleave', handleDragLeave);
+                list.addEventListener('drop', handleDrop);
+                list.addEventListener('dragend', handleDragEnd);
             });
+        }
+
+        function handleDragStart(e) {
+            if (!e.target.classList.contains('task-item')) return;
             
-            // Force Sync Button
-            DOM.forceSyncBtn.addEventListener('click', handleForceSync);
+            const taskItem = e.target;
+            app.dragSource = taskItem;
+            taskItem.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', taskItem.dataset.targetId);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDragEnter(e) {
+            if (!e.target.classList.contains('task-item') || e.target === app.dragSource) return;
+            e.target.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            if (!e.target.classList.contains('task-item')) return;
+            e.target.classList.remove('drag-over');
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+            if (!e.target.classList.contains('task-item') || !app.dragSource) return;
             
+            const draggedId = app.dragSource.dataset.targetId;
+            const targetId = e.target.dataset.targetId;
+            
+            if (draggedId === targetId) return;
+            
+            const container = e.target.closest('[id$="-targets-list"]');
+            const tasks = Array.from(container.querySelectorAll('.task-item'));
+            
+            const draggedIndex = tasks.findIndex(task => task.dataset.targetId === draggedId);
+            const targetIndex = tasks.findIndex(task => task.dataset.targetId === targetId);
+            
+            if (draggedIndex === -1 || targetIndex === -1) return;
+            
+            if (draggedIndex < targetIndex) {
+                container.insertBefore(app.dragSource, tasks[targetIndex].nextSibling);
+            } else {
+                container.insertBefore(app.dragSource, tasks[targetIndex]);
+            }
+            
+            await updateTaskOrder(container.id.replace('-targets-list', ''), tasks);
+        }
+
+        function handleDragEnd(e) {
+            if (!e.target.classList.contains('task-item')) return;
+            
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.task-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+            app.dragSource = null;
+        }
+
+        async function updateTaskOrder(type, taskElements) {
+            if (app.isSyncing) return;
+            app.isSyncing = true;
+            
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const isDaily = type === 'daily';
+                
+                const currentDate = isDaily ? today : null;
+                
+                const batch = app.firestoreDB.batch();
+                let indexedDBPromises = [];
+                
+                taskElements.forEach((taskElement, index) => {
+                    const targetId = taskElement.dataset.targetId;
+                    const target = app.targets.get(targetId);
+                    
+                    if (target && target.order !== index) {
+                        const updatedTarget = { ...target, order: index, updatedAt: new Date() };
+                        indexedDBPromises.push(app.db.put('targets', updatedTarget));
+                        app.targets.set(targetId, updatedTarget);
+                        
+                        const docRef = app.firestoreDB.collection('targets').doc(targetId);
+                        batch.set(docRef, updatedTarget);
+                    }
+                });
+                
+                await Promise.all(indexedDBPromises);
+                if (indexedDBPromises.length > 0) await batch.commit();
+                
+                showNotification("Tasks reordered successfully!", "success");
+                
+            } catch (error) {
+                console.error("Failed to reorder tasks:", error);
+                showNotification("Error reordering tasks. Please try again.", "error");
+            } finally {
+                app.isSyncing = false;
+            }
+        }
+
+        function registerEventListeners() {
             // Tabs
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -1724,7 +1558,7 @@
                 }
             });
 
-            // Targets list interactions
+            // Targets list interactions - UPDATED to handle edit button
             document.getElementById('daily-targets-list').addEventListener('click', handleTargetListClick);
             document.getElementById('weekly-targets-list').addEventListener('click', handleTargetListClick);
             
@@ -1780,98 +1614,9 @@
 
             // Notification close
             DOM.notificationClose.addEventListener('click', hideNotification);
-        }
-        
-        // Force Sync functionality
-        async function handleForceSync() {
-            if (app.isSyncing) {
-                showNotification("Sync already in progress", "info");
-                return;
-            }
-            
-            if (!app.firestoreDB) {
-                showNotification("Firebase not available for sync", "error");
-                return;
-            }
-            
-            app.isSyncing = true;
-            DOM.forceSyncBtn.disabled = true;
-            DOM.forceSyncBtn.classList.add('syncing');
-            DOM.forceSyncBtn.innerHTML = `
-                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Syncing...
-            `;
-            
-            try {
-                showNotification("Starting force sync to Firebase...", "info");
-                
-                // Sync all data from IndexedDB to Firebase
-                const syncPromises = [];
-                let totalItems = 0;
-                let syncedItems = 0;
-                
-                // Sync subjects
-                const subjects = Array.from(app.subjects.values());
-                totalItems += subjects.length;
-                subjects.forEach(subject => {
-                    syncPromises.push(
-                        syncToFirestore('subjects', subject.id, subject)
-                            .then(() => { syncedItems++; })
-                    );
-                });
-                
-                // Sync topics
-                const topics = Array.from(app.topics.values());
-                totalItems += topics.length;
-                topics.forEach(topic => {
-                    syncPromises.push(
-                        syncToFirestore('topics', topic.id, topic)
-                            .then(() => { syncedItems++; })
-                    );
-                });
-                
-                // Sync readings
-                const readings = Array.from(app.readings.values());
-                totalItems += readings.length;
-                readings.forEach(reading => {
-                    syncPromises.push(
-                        syncToFirestore('readings', reading.id, reading)
-                            .then(() => { syncedItems++; })
-                    );
-                });
-                
-                // Sync targets
-                const targets = Array.from(app.targets.values());
-                totalItems += targets.length;
-                targets.forEach(target => {
-                    syncPromises.push(
-                        syncToFirestore('targets', target.id, target)
-                            .then(() => { syncedItems++; })
-                    );
-                });
-                
-                await Promise.all(syncPromises);
-                
-                showNotification(`Successfully synced ${syncedItems} items to Firebase!`, "success");
-                console.log(`Force sync completed: ${syncedItems}/${totalItems} items synced`);
-                
-            } catch (error) {
-                console.error("Force sync failed:", error);
-                showNotification("Force sync failed: " + error.message, "error");
-            } finally {
-                app.isSyncing = false;
-                DOM.forceSyncBtn.disabled = false;
-                DOM.forceSyncBtn.classList.remove('syncing');
-                DOM.forceSyncBtn.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                    </svg>
-                    Force Sync to Firebase
-                `;
-            }
+
+            // Initialize drag and drop after a short delay to ensure DOM is ready
+            setTimeout(initDragAndDrop, 500);
         }
         
         // Handle edit button in target lists
@@ -2677,8 +2422,7 @@
                 await app.firestoreDB.collection(collectionName).doc(docId).set(data);
             } catch (error) {
                 console.error("Firestore Sync Error:", error);
-                DOM.syncStatusText.textContent = "Sync failed. Retrying...";
-                throw error;
+                document.getElementById('sync-status-text').textContent = "Sync failed. Retrying...";
             }
         }
         
@@ -2688,15 +2432,14 @@
                 await app.firestoreDB.collection(collectionName).doc(docId).delete();
             } catch (error) {
                 console.error("Firestore Delete Error:", error);
-                DOM.syncStatusText.textContent = "Sync failed. Retrying...";
-                throw error;
+                document.getElementById('sync-status-text').textContent = "Sync failed. Retrying...";
             }
         }
 
         function initFirestoreSync() {
             if (!app.firestoreDB) {
                 console.log("Firestore not available, running in offline mode");
-                DOM.syncStatusText.textContent = "Offline mode";
+                document.getElementById('sync-status-text').textContent = "Offline mode";
                 return;
             }
             
@@ -2706,7 +2449,7 @@
             app.listeners = [];
 
             console.log("Initializing Firestore real-time listeners...");
-            DOM.syncStatusText.textContent = "Syncing...";
+            document.getElementById('sync-status-text').textContent = "Syncing...";
             
             collectionsToSync.forEach(collectionName => {
                 const collectionRef = app.firestoreDB.collection(collectionName);
@@ -2747,11 +2490,11 @@
                         await loadDataFromIndexedDB();
                         renderAll();
                     }
-                    DOM.syncStatusText.textContent = "Real-time sync active.";
+                    document.getElementById('sync-status-text').textContent = "Real-time sync active.";
                     
                 }, (error) => {
                     console.error(`Firestore listener error for ${collectionName}:`, error);
-                    DOM.syncStatusText.textContent = "Sync disconnected. Retrying...";
+                    document.getElementById('sync-status-text').textContent = "Sync disconnected. Retrying...";
                 });
                 
                 app.listeners.push(unsubscribe);
